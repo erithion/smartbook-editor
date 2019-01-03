@@ -1,13 +1,12 @@
 # smartbook-editor
 React.js UI component to edit Smartbooks 
 
-## `npm install`
-Installs all required dependencies
+## Prerequisites
+Installed Node.js
 
-## `npm start`
+## To run
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+* `npm install`
+* `npm start`
 
-The page will reload if you make edits.<br>
-You will also see any lint errors in the console.
+If the app's UI has not been opened in a browser, go to [http://localhost:3000](http://localhost:3000) to view it there.
