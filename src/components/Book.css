@@ -1,0 +1,19 @@
+
+.first-book-block {
+/*  color: lightgreen;*/
+	background-color: #e6ffed;
+	
+    color: #24292e;
+    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+    font-size: 14px;
+}
+
+.second-book-block {
+/*  color: lightcoral;*/
+	background-color: #ffeef0;
+
+	color: #24292e;
+    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+    font-size: 14px;
+
+}
