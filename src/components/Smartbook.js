@@ -2,156 +2,215 @@ import React from 'react';
 import Draft from 'draft-js';
 import Imm from 'immutable';
 import './Book.css';
+var assert = require('assert');
 
 class BookBlock extends React.Component {
-	render() {
-		const {block, contentState} = this.props;
-		const {css} = this.props.blockProps;
-		return (
-			<div className={css}>
-				<Draft.EditorBlock {...this.props} />
-			</div>
-		);
-	}
+    render() {
+        const {block, contentState} = this.props;
+        const {css} = this.props.blockProps;
+        return (
+            <div className={css}>
+                <Draft.EditorBlock {...this.props} />
+            </div>
+        );
+    }
 }
 
 function myBlockRenderer(contentBlock) {
-	const type = contentBlock.getType();
-	if (type === 'unstyled') {
-		var val = '';
-		if (contentBlock.data.book === 'first') val = 'first-book-block';
-		else if (contentBlock.data.book === 'second') val = 'second-book-block';
-		return {
-			component: BookBlock,
-			props: {
-				css: val,
-			},
-		};
-	}
+    const type = contentBlock.getType();
+    if (type === 'unstyled') {
+        var val = '';
+        if (contentBlock.data.book === 'first') val = 'first-book-block';
+        else if (contentBlock.data.book === 'second') val = 'second-book-block';
+        return {
+            component: BookBlock,
+            props: {
+                css: val,
+            },
+        };
+    }
 }
 
 class Smartbook extends React.Component {
-	constructor(props) {
-		super(props);
-		this.state = {
-			editorState: Draft.EditorState.createEmpty()
-		};
-	}
+    constructor(props) {
+        super(props);
+        const initialBlocks = [this.makeContentBlock("", 'first')];
+        this.state = {
+            editorState: Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(initialBlocks))
+        };
+   }
 
-	onChange = (editorState) => {
-		this.setState({
-			editorState
-		})
-	}
+    onChange = (editorState) => {
+        this.setState({
+            editorState
+        })
+    }
 
-	handleReturn = (evt) => {
-		const { editorState } = this.state;
+    makeContentBlock = (blockText, bookType) => new Draft.ContentBlock({
+        key: Draft.genKey(),
+        type: 'unstyled',
+        text: blockText,
+        data: { book: bookType }
+    });
 
-		var   currentContent = editorState.getCurrentContent();
-		var   selectionState = editorState.getSelection();
+    zipTexts = (texts: [string]) : [[string]] => {
+        const splits = texts.map(el => 
+            Imm.List(el ? el.split("\n") : []));
+        const max = splits.reduce((accum, data) => 
+            Math.max(accum, data.count()), 0);
+        const aligns = splits.map(el => 
+            el.concat( Imm.Repeat(null, max - el.count()) ));
+        return Imm.List(aligns).get(0).zip(...Imm.List(aligns).rest()).toArray();
+    }
 
-		var   currentKey = selectionState.getFocusKey();
-		var   nextKey = currentContent.getKeyAfter(currentKey);
-		var   currentBlock = currentContent.getBlockForKey(currentKey);
-		var   nextBlock = currentContent.getBlockAfter(currentKey);
+    toContentBlocks = (zipped, order) : Iterable<List<ContentBlock>> => {
+        return zipped.map(block => 
+                Imm.List(block).zipWith((el, type) => this.makeContentBlock(el ? el : '', type), order).toArray() )
+            // This is really dumb. It is basically foldl here.
+            // Why not to follow Haskell's 'join' (or 'concat' for the lists) laws to flatten out the inner list?!!!
+            . reduce((accum, data) => {
+                return accum.concat(data);
+            }, []);
+    }
+    
+    getCurrent = (state) => {
+        const content = state.getCurrentContent();
+        const selection = state.getSelection();
+        const key = selection.focusKey;
+        const offset = selection.focusOffset;
+        const block = content.getBlockForKey(key);
+        const type = block.data.book;
+        return {key: key, offset: offset, block: block, type: type};
+    }
+    
+    /*  The resulting ContentBlocks map must be applied to editorState to take effect.
+        Inserts the text into blockInto ContentBlock at offsetInto offset. 
+        The type of the book is determined by the first element of the order list
+            order - the list. 
+                    Example: ['first', 'second', 'third'] - the function will mark the inserted blocks with the book text as 'first';
+                             and will add an array of 'second' and 'third' ContentBlocks of size of the inserted text in 'first'
+    */
+    insertText = (state, blockInto, offsetInto, order, text) => {
+        const blocks = state.getCurrentContent().getBlockMap();
+        const blocksBefore = blocks.toSeq().takeUntil(block => block === blockInto).toArray();
+        const blocksAfter = blocks.toSeq().skipUntil(block => block === blockInto).toArray();
+        
+        const texts = order.map(bookType =>
+            blocksAfter.filter(block => block.data.book === bookType)
+                       .reduce((accum, data) => accum + data.text + "\n", "")
+                       .slice(0, -1) // removing last \n
+        );
+        // [ "book 1 text ...", "book 2 text ...", ..., "book N text ..." ]
+        
+        const joined = Imm.List(texts).set(0, texts[0].substring(0, offsetInto) 
+                                            + text 
+                                            + texts[0].substring(offsetInto)).toArray();
 
-		if (nextBlock) {
-			// Exchanging the current paragraph with the one below
-			var   selectionFrom = Draft.SelectionState.createEmpty(currentKey)
-					.set('focusOffset', currentBlock.getLength())
-					.set('anchorOffset', 0)
-					.set('hasFocus', true);
-			var   selectionTo = Draft.SelectionState.createEmpty(nextKey)
-					.set('focusOffset', nextBlock.getLength())
-					.set('anchorOffset', 0);
-			var   textFrom = currentBlock.getText();
-			var   textTo = nextBlock.getText();
+        const zipped = this.zipTexts(joined);
+        const newBlocks = this.toContentBlocks(zipped, order);
 
-			var   newContent = Draft.Modifier.replaceText(currentContent, selectionFrom, textTo);
-				  newContent = Draft.Modifier.replaceText(newContent, selectionTo, textFrom);
+        const blocksMap = Draft.ContentState.createFromBlockArray(blocksBefore.concat(newBlocks));
 
-			// Moving the cursor down at the moved paragraph
-			var   newFocusSelection = Draft.SelectionState.createEmpty(nextKey);
-			const newState = Draft.EditorState.forceSelection(Draft.EditorState.createWithContent(newContent), newFocusSelection);
+        // Calculating the insertion borders
+        const temp = text.split("\n");
+        const startIndex = blocksBefore.length;
+        const endIndex = blocksBefore.length + (temp.length * order.length - 1) - 1;
+        const endOffset = temp[temp.length - 1].length;
 
-			// Applying the changes
-			this.onChange(newState);
-			return 'handled';
-		}
-		return 'not-handled';
-	}
-  
-	makeContentBlock = (blockText, bookType) => new Draft.ContentBlock({
-		key: Draft.genKey(),
-		type: 'unstyled',
-		text: blockText,
-		data: { book: bookType }
-	});
-  
-	padListSize = (listFirst, listSecond) => {
-		const max = Math.max(listFirst.count(), listSecond.count());
-		
-		return { 
-			first: listFirst.concat( Imm.Repeat(null, max - listFirst.count()) ),
-			second: listSecond.concat( Imm.Repeat(null, max - listSecond.count()) )
-	   };
-	}
-  
-	addFirst = (text, e) => {
-		const { editorState } = this.state;
-		const content = editorState.getCurrentContent();
-		const focusBlock = content.getBlockForKey(editorState.getSelection().getFocusKey());
+        return { blocks: blocksMap
+               , startIndex: startIndex, startOffset: offsetInto
+               , endIndex: endIndex, endOffset: endOffset};
+    }
 
-		const blocks = content.getBlockMap();
-		const beforeFocus = blocks.toSeq().takeUntil(block => block === focusBlock).toArray();
-		const afterFocus = blocks.toSeq().skipUntil(block => block === focusBlock).toArray();
-		
-		// filtered only one book contentBlocks
-		const firstBook = afterFocus.filter(block => block.data.book === 'first');
-		const secondBook = afterFocus.filter(block => block.data.book === 'second');
+    // The resulting SelectionState must be applied to editorState to take effect.
+    moveCursor = (key, offset) => 
+        new Draft.SelectionState({
+            anchorKey: key,
+            anchorOffset: offset,
+            focusKey: key,
+            focusOffset: offset,
+            isBackward: false,
+        })
+    
+    handlePastedText = (text: string, html?: string, editorState: EditorState): DraftHandleValue => {
+        const {key, offset, block, type} = this.getCurrent(editorState);
+        var order = ['first', 'second'];
+        if (type === 'second')
+            // The cursor is on the second book
+            order = ['second', 'first'];
+        
+        const {blocks, startIndex, startOffset, endIndex, endOffset} = this.insertText(editorState, block, offset, order, text);
+        const newState = Draft.EditorState.forceSelection(
+            Draft.EditorState.createWithContent(blocks),
+            this.moveCursor(blocks.getBlocksAsArray()[endIndex].key, endOffset));
+            
+        console.log('start');
+        console.log(blocks.getBlocksAsArray()[startIndex].text);
+        console.log(startOffset);
+        console.log('end');
+        console.log(blocks.getBlocksAsArray()[endIndex].text);
+        console.log(endOffset);
 
-		var   contentBlocksArray = text.split('\n').map(word => this.makeContentBlock(word, 'first'));
-			  contentBlocksArray = contentBlocksArray.concat(firstBook);
+        // Applying the changes
+        this.onChange(newState);
+        return 'handled';
+    }
 
-		var   {first, second} = this.padListSize(Imm.List(contentBlocksArray), Imm.List(secondBook));
-			  first = first.map(block => block ? block : this.makeContentBlock("", 'first'));
-			  second = second.map(block => block ? block : this.makeContentBlock("", 'second'));
-			  contentBlocksArray = first.interleave(second).toArray();
-			  contentBlocksArray = beforeFocus.concat(contentBlocksArray);
+    handleKeyCommand(command: string): DraftHandleValue {
+        console.log(command);
+        if (command === 'myeditor-save') {
+            // Perform a request to save your contents, set
+            // a new `editorState`, etc.
+            return 'handled';
+        }
+        return 'not-handled';
+    }
 
-		// Applying the changes
-		const newState = Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(contentBlocksArray));
-		this.onChange(newState);
-	}
-	
-	addSecond = (text, e) => {
-		const test = text.split('\n').map(word => 
-			new Draft.ContentBlock({
-				key: Draft.genKey(),
-				type: 'unstyled',
-				text: word,
-				data: { book: 'second' }
-			}));
+    render() {
+        return (
+            <div>
+            <Draft.Editor
+                editorState={this.state.editorState}
+                onChange={this.onChange}
+                handleReturn={this.handlePastedText.bind(this, '\n')}
+                blockRendererFn={myBlockRenderer}
+                handleKeyCommand={this.handleKeyCommand}
+                handlePastedText={this.handlePastedText}
+            />
 
-			
-		// Applying the changes
-		this.onChange(Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(test)));
-	}
-	
-	render() {
-		return (
-			<div>
-			<Draft.Editor
-				editorState={this.state.editorState}
-				onChange={this.onChange}
-				handleReturn={this.handleReturn}
-				blockRendererFn={myBlockRenderer}
-			/>
-	  
-	  
-	                <input
-                onClick={this.addFirst.bind(this, 
-				`HOLMES, som vanligvis var meget sent oppe om morgenen, untatt i de ikke sjeldne tilfellene da han var oppe hele natten — satt ved frokostbordet.
+                    <input
+                    onClick={
+() => {
+
+        var first = "123\n4567\n890";
+        var second = "abc\ndef\nghi\njkl\nmno";
+        var   ls = Imm.List(first ? first.split("\n") : []);
+        var   rs = Imm.List(second ? second.split("\n") : []);
+        const max = Math.max(ls.count(), rs.count());
+
+              ls = ls.concat( Imm.Repeat(null, max - ls.count()) );
+              rs = rs.concat( Imm.Repeat(null, max - rs.count()) );
+
+        const zipped = ls.zip(rs);
+        const blocks = this.toContentBlocks(zipped, ['first', 'second']);
+        console.log(blocks);
+        
+
+        const { editorState } = this.state;
+        var   selectionState = editorState.getSelection();
+        const content = editorState.getCurrentContent();
+        var   currentKey = selectionState.getFocusKey();
+        var   nextKey = content.getKeyAfter(currentKey);
+        var   newFocusSelection = Draft.SelectionState.createEmpty(nextKey);
+        const newState = Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(blocks));
+
+            // Applying the changes
+            this.onChange(newState);
+        
+    }                        
+                    }
+/*                onClick={this.addFirst.bind(this, 
+                `HOLMES, som vanligvis var meget sent oppe om morgenen, untatt i de ikke sjeldne tilfellene da han var oppe hele natten — satt ved frokostbordet.
 
 Jeg stod på kaminteppet og tok opp stokken som vår gjest den foregående aften hadde etterlatt seg. Den var forarbeidet av vakkert, fast tre, og hadde et løkformet hode. Like under håndtaket gikk et nesten tommebredt sølvbånd.
 
@@ -170,13 +229,14 @@ Holmes satt med ryggen til meg, og jeg hadde ikke gitt ham noe slags vink om hva
 “Jeg tror,” sa jeg, i det jeg fulgte så godt jeg kunne min venns fremgangsmåte, “at Doktor Mortimer er en meget populær eldre lege, velansett, siden de som kjente ham ga ham dette tegn på sin respekt.”
 
 “Godt!” sa Holmes. “Utmerket!”`  //"text\nof\nthe\nfirst\nbook\nthank\nyou\nvery\nmuch"
-				)}
+                )}
+*/                
                 type="button"
                 value="Add first"
               />
-	                <input
-                onClick={this.addSecond.bind(this, 
-				`Mr. Sherlock Holmes, who was usually very late in the mornings, save upon those not infrequent occasions when he was up all night, was seated at the breakfast table. I stood upon the hearth-rug and picked up the stick which our visitor had left behind him the night before. It was a fine, thick piece of wood, bulbous-headed, of the sort which is known as a "Penang lawyer." Just under the head was a broad silver band nearly an inch across. "To James Mortimer, M.R.C.S., from his friends of the C.C.H.," was engraved upon it, with the date "1884." It was just such a stick as the old-fashioned family practitioner used to carry—dignified, solid, and reassuring.
+                    <input
+                onClick={this.handlePastedText.bind(this, 
+                `Mr. Sherlock Holmes, who was usually very late in the mornings, save upon those not infrequent occasions when he was up all night, was seated at the breakfast table. I stood upon the hearth-rug and picked up the stick which our visitor had left behind him the night before. It was a fine, thick piece of wood, bulbous-headed, of the sort which is known as a "Penang lawyer." Just under the head was a broad silver band nearly an inch across. "To James Mortimer, M.R.C.S., from his friends of the C.C.H.," was engraved upon it, with the date "1884." It was just such a stick as the old-fashioned family practitioner used to carry—dignified, solid, and reassuring.
 
 "Well, Watson, what do you make of it?"
 
@@ -197,14 +257,14 @@ Holmes was sitting with his back to me, and I had given him no sign of my occupa
 "Because this stick, though originally a very handsome one has been so knocked about that I can hardly imagine a town practitioner carrying it. The thick-iron ferrule is worn down, so it is evident that he has done a great amount of walking with it."
 
 "Perfectly sound!" said Holmes.
-` //"text\nof\nthe\nsecond\nbook"
-				)}
+`, '', this.state.editorState //"text\nof\nthe\nsecond\nbook"
+                )}
                 type="button"
                 value="Add second"
               />
 
-			</div>
-		);
-	}
+            </div>
+        );
+    }
 }
 export default Smartbook
