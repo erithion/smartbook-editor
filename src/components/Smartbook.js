@@ -122,6 +122,37 @@ class Smartbook extends React.Component {
                , endIndex: endIndex, endOffset: endOffset};
     }
 
+    /* Deletion always happens backwards 
+        
+    */
+    deleteText = (state, blockFrom, offsetFrom, length, order) => {
+        const blocks = state.getCurrentContent().getBlockMap();
+        const blocksBefore = blocks.toSeq().takeUntil(block => block === blockFrom).toArray();
+        const blocksAfter = blocks.toSeq().skipUntil(block => block === blockFrom).toArray();
+        
+        const texts = order.map(bookType =>
+            blocksAfter.filter(block => block.data.book === bookType)
+                       .reduce((accum, data) => accum + data.text + "\n", "")
+                       .slice(0, -1) // removing last \n
+        );
+        // [ "book 1 text ...", "book 2 text ...", ..., "book N text ..." ]
+        
+        const joined = Imm.List(texts).set(0, texts[0].substring(0, offsetFrom) 
+//                                            + text 
+                                            + texts[0].substring(offsetFrom)).toArray();
+
+        const zipped = this.zipTexts(joined);
+        const newBlocks = this.toContentBlocks(zipped, order);
+
+        const blocksMap = Draft.ContentState.createFromBlockArray(blocksBefore.concat(newBlocks));
+
+        // Calculating the insertion borders
+
+        return { blocks: blocksMap
+               , startIndex: 0, startOffset: 0
+               , endIndex: 0, endOffset: 0};
+    }
+
     // The resulting SelectionState must be applied to editorState to take effect.
     moveCursor = (key, offset) => 
         new Draft.SelectionState({
