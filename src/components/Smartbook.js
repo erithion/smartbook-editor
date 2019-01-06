@@ -2,7 +2,6 @@ import React from 'react';
 import Draft from 'draft-js';
 import Imm from 'immutable';
 import './Book.css';
-var assert = require('assert');
 
 class BookBlock extends React.Component {
     render() {
@@ -63,7 +62,7 @@ class Smartbook extends React.Component {
         return Imm.List(aligns).get(0).zip(...Imm.List(aligns).rest()).toArray();
     }
 
-    toContentBlocks = (zipped, order) : Iterable<List<ContentBlock>> => {
+    toContentBlocks = (zipped, order) => {
         return zipped.map(block => 
                 Imm.List(block).zipWith((el, type) => this.makeContentBlock(el ? el : '', type), order).toArray() )
             // This is really dumb. It is basically foldl here.
@@ -125,32 +124,60 @@ class Smartbook extends React.Component {
     /* Deletion always happens backwards 
         
     */
-    deleteText = (state, blockFrom, offsetFrom, length, order) => {
+    deleteText = (state, blockFrom, offsetFrom, length) => {
         const blocks = state.getCurrentContent().getBlockMap();
-        const blocksBefore = blocks.toSeq().takeUntil(block => block === blockFrom).toArray();
-        const blocksAfter = blocks.toSeq().skipUntil(block => block === blockFrom).toArray();
+        const bookType = blockFrom.data.book;
         
-        const texts = order.map(bookType =>
-            blocksAfter.filter(block => block.data.book === bookType)
-                       .reduce((accum, data) => accum + data.text + "\n", "")
-                       .slice(0, -1) // removing last \n
-        );
-        // [ "book 1 text ...", "book 2 text ...", ..., "book N text ..." ]
+        const cur = blocks.toSeq()
+            .filter(block => block.data.book === bookType);
+        const rest = blocks.toSeq()
+            .map(el => el.data.book === bookType ? null : el).toArray();
         
-        const joined = Imm.List(texts).set(0, texts[0].substring(0, offsetFrom) 
-//                                            + text 
-                                            + texts[0].substring(offsetFrom)).toArray();
+        // start here
+        const prev = cur
+            .takeUntil(block => block === blockFrom)
+            .reduce((accum, data) => accum + data.text + "\n", "") + blockFrom.text;
+        const offsetFromEnd = blockFrom.text.length - offsetFrom;
+        const text = (prev.substring(0, prev.length - offsetFromEnd - length) + blockFrom.text.substring(offsetFrom))
+            .split("\n");
+            
+        const newBlocks = Imm.List(text).map(txt => this.makeContentBlock(txt, bookType)).toArray();  
+        const newFocusKey = newBlocks[newBlocks.length - 1].key;
+        const newFocusOffset = newBlocks[newBlocks.length - 1].text.length - offsetFromEnd;
+//        console.log('offset = %i', newFocusOffset);
+//        console.log('text = %s', newBlocks[newBlocks.length - 1].text);
+        
+        // Pad
+        var v1 = newBlocks.concat(cur.toSeq().skipUntil(block => block === blockFrom).rest().toArray());
+//            v1 = v1.concat( new Array(cur.count() - v1.length).map(_ => this.makeContentBlock('', bookType)) );
+        
+        // Building back
+        const {arr, idx} = rest
+            .reduce((accum, el) => {
+                if (el === null) {
+                    if (accum.idx < v1.length) {
+                        accum.arr = accum.arr.concat(v1[accum.idx]);
+                        accum.idx += 1;
+                    } else {
+                        accum.arr = accum.arr.concat(this.makeContentBlock('', bookType));
+                    }
+                        
+                } else 
+                    accum.arr = accum.arr.concat(el);
+                return accum;
+            }, {arr: [], idx: 0});
+//        cur.map(data => console.log(data.text));
+//        rest.map(data => data === null ? console.log('null') : console.log(data.text));
+//        console.log(arr);
+//console.log(arr.length);
+//        arr.map(data => console.log(data === null || data.text === null ? 'null' : data.text));
 
-        const zipped = this.zipTexts(joined);
-        const newBlocks = this.toContentBlocks(zipped, order);
-
-        const blocksMap = Draft.ContentState.createFromBlockArray(blocksBefore.concat(newBlocks));
-
-        // Calculating the insertion borders
-
-        return { blocks: blocksMap
-               , startIndex: 0, startOffset: 0
-               , endIndex: 0, endOffset: 0};
+        
+        return { blocks: Draft.ContentState.createFromBlockArray(arr)
+               , mykey: newFocusKey
+               , myoffset: newFocusOffset
+        };
+        
     }
 
     // The resulting SelectionState must be applied to editorState to take effect.
@@ -174,24 +201,34 @@ class Smartbook extends React.Component {
         const newState = Draft.EditorState.forceSelection(
             Draft.EditorState.createWithContent(blocks),
             this.moveCursor(blocks.getBlocksAsArray()[endIndex].key, endOffset));
-            
+/*            
         console.log('start');
         console.log(blocks.getBlocksAsArray()[startIndex].text);
         console.log(startOffset);
         console.log('end');
         console.log(blocks.getBlocksAsArray()[endIndex].text);
         console.log(endOffset);
-
+*/
         // Applying the changes
         this.onChange(newState);
         return 'handled';
     }
 
-    handleKeyCommand(command: string): DraftHandleValue {
-        console.log(command);
-        if (command === 'myeditor-save') {
-            // Perform a request to save your contents, set
-            // a new `editorState`, etc.
+    handleKeyCommand = (command: string, editorState) => {
+//        console.log(command);
+        if (command === 'backspace') {
+            const {key, offset, block, type} = this.getCurrent(editorState);
+            var order = ['first', 'second'];
+            if (type === 'second')
+                // The cursor is on the second book
+                order = ['second', 'first'];
+        
+            const {blocks, mykey, myoffset} = this.deleteText(editorState, block, offset, 1);
+        const newState = Draft.EditorState.forceSelection(
+            Draft.EditorState.createWithContent(blocks),
+            this.moveCursor(mykey, myoffset));
+        // Applying the changes
+        this.onChange(newState);
             return 'handled';
         }
         return 'not-handled';
@@ -224,7 +261,7 @@ class Smartbook extends React.Component {
 
         const zipped = ls.zip(rs);
         const blocks = this.toContentBlocks(zipped, ['first', 'second']);
-        console.log(blocks);
+//        console.log(blocks);
         
 
         const { editorState } = this.state;
