@@ -1,34 +1,7 @@
 import React from 'react';
 import Draft from 'draft-js';
 import Imm from 'immutable';
-import './Book.css';
-
-class BookBlock extends React.Component {
-    render() {
-        const {block, contentState} = this.props;
-        const {css} = this.props.blockProps;
-        return (
-            <div className={css}>
-                <Draft.EditorBlock {...this.props} />
-            </div>
-        );
-    }
-}
-
-function myBlockRenderer(contentBlock) {
-    const type = contentBlock.getType();
-    if (type === 'unstyled') {
-        var val = '';
-        if (contentBlock.data.book === 'first') val = 'first-book-block';
-        else if (contentBlock.data.book === 'second') val = 'second-book-block';
-        return {
-            component: BookBlock,
-            props: {
-                css: val,
-            },
-        };
-    }
-}
+import {Smartblock, smartRenderer} from './block';
 
 class Smartbook extends React.Component {
     constructor(props) {
@@ -128,107 +101,80 @@ class Smartbook extends React.Component {
         const blocks = state.getCurrentContent().getBlockMap();
         const bookType = blockFrom.data.book;
         
-        const cur = blocks.toSeq()
+        const thisBook = blocks.toSeq()
             .filter(block => block.data.book === bookType);
-        const rest = blocks.toSeq()
+        const otherBooks = blocks.toSeq()
             .map(el => el.data.book === bookType ? null : el).toArray();
         
-        // start here
-        const prev = cur
+        // Deleting
+        const prevText = thisBook
             .takeUntil(block => block === blockFrom)
             .reduce((accum, data) => accum + data.text + "\n", "") + blockFrom.text;
         const offsetFromEnd = blockFrom.text.length - offsetFrom;
-        const text = (prev.substring(0, prev.length - offsetFromEnd - length) + blockFrom.text.substring(offsetFrom))
+        const textLines = ( prevText.substring(0, prevText.length - offsetFromEnd - length)
+                          + blockFrom.text.substring(offsetFrom))
             .split("\n");
-            
-        const newBlocks = Imm.List(text).map(txt => this.makeContentBlock(txt, bookType)).toArray();  
-        const newFocusKey = newBlocks[newBlocks.length - 1].key;
-        const newFocusOffset = newBlocks[newBlocks.length - 1].text.length - offsetFromEnd;
-//        console.log('offset = %i', newFocusOffset);
-//        console.log('text = %s', newBlocks[newBlocks.length - 1].text);
         
-        // Pad
-        var v1 = newBlocks.concat(cur.toSeq().skipUntil(block => block === blockFrom).rest().toArray());
-//            v1 = v1.concat( new Array(cur.count() - v1.length).map(_ => this.makeContentBlock('', bookType)) );
+        // New borders
+        const prevBlocks = Imm.List(textLines).map(txt => this.makeContentBlock(txt, bookType)).toArray();  
+        const newFocusKey = prevBlocks[prevBlocks.length - 1].key;
+        const newFocusOffset = prevBlocks[prevBlocks.length - 1].text.length - offsetFromEnd;
         
         // Building back
-        const {arr, idx} = rest
-            .reduce((accum, el) => {
-                if (el === null) {
-                    if (accum.idx < v1.length) {
-                        accum.arr = accum.arr.concat(v1[accum.idx]);
-                        accum.idx += 1;
-                    } else {
-                        accum.arr = accum.arr.concat(this.makeContentBlock('', bookType));
-                    }
-                        
-                } else 
-                    accum.arr = accum.arr.concat(el);
-                return accum;
-            }, {arr: [], idx: 0});
-//        cur.map(data => console.log(data.text));
-//        rest.map(data => data === null ? console.log('null') : console.log(data.text));
-//        console.log(arr);
-//console.log(arr.length);
-//        arr.map(data => console.log(data === null || data.text === null ? 'null' : data.text));
-
+        const newBlocks = prevBlocks.concat(thisBook.skipUntil(block => block === blockFrom).rest().toArray());
+        var   idx = 0; // with closure it is simpler than with reduce
+        const arr = otherBooks.map(el => {
+            if (el !== null) 
+                return el;
+            else if (idx < newBlocks.length)
+                return newBlocks[idx++];
+            else 
+                return this.makeContentBlock('', bookType);
+        });
         
         return { blocks: Draft.ContentState.createFromBlockArray(arr)
-               , mykey: newFocusKey
-               , myoffset: newFocusOffset
-        };
-        
+               , key: newFocusKey
+               , offset: newFocusOffset
+        };        
     }
 
     // The resulting SelectionState must be applied to editorState to take effect.
     moveCursor = (key, offset) => 
         new Draft.SelectionState({
-            anchorKey: key,
-            anchorOffset: offset,
-            focusKey: key,
-            focusOffset: offset,
-            isBackward: false,
+                anchorKey: key,
+                anchorOffset: offset,
+                focusKey: key,
+                focusOffset: offset,
+                isBackward: false,
         })
     
     handlePastedText = (text: string, html?: string, editorState: EditorState): DraftHandleValue => {
         const {key, offset, block, type} = this.getCurrent(editorState);
-        var order = ['first', 'second'];
-        if (type === 'second')
+        const order = type === 'second' 
             // The cursor is on the second book
-            order = ['second', 'first'];
+            ? ['second', 'first'] 
+            : ['first', 'second'];
         
-        const {blocks, startIndex, startOffset, endIndex, endOffset} = this.insertText(editorState, block, offset, order, text);
+        const val = this.insertText(editorState, block, offset, order, text);
         const newState = Draft.EditorState.forceSelection(
-            Draft.EditorState.createWithContent(blocks),
-            this.moveCursor(blocks.getBlocksAsArray()[endIndex].key, endOffset));
-/*            
-        console.log('start');
-        console.log(blocks.getBlocksAsArray()[startIndex].text);
-        console.log(startOffset);
-        console.log('end');
-        console.log(blocks.getBlocksAsArray()[endIndex].text);
-        console.log(endOffset);
-*/
+            Draft.EditorState.createWithContent(val.blocks),
+            this.moveCursor(val.blocks.getBlocksAsArray()[val.endIndex].key, val.endOffset));
+
         // Applying the changes
         this.onChange(newState);
         return 'handled';
     }
 
     handleKeyCommand = (command: string, editorState) => {
-//        console.log(command);
         if (command === 'backspace') {
             const {key, offset, block, type} = this.getCurrent(editorState);
-            var order = ['first', 'second'];
-            if (type === 'second')
-                // The cursor is on the second book
-                order = ['second', 'first'];
-        
-            const {blocks, mykey, myoffset} = this.deleteText(editorState, block, offset, 1);
-        const newState = Draft.EditorState.forceSelection(
-            Draft.EditorState.createWithContent(blocks),
-            this.moveCursor(mykey, myoffset));
-        // Applying the changes
-        this.onChange(newState);
+            const val = this.deleteText(editorState, block, offset, 1);
+            
+            const newState = Draft.EditorState.forceSelection(
+                Draft.EditorState.createWithContent(val.blocks),
+                this.moveCursor(val.key, val.offset));
+            // Applying the changes
+            this.onChange(newState);
             return 'handled';
         }
         return 'not-handled';
@@ -241,7 +187,7 @@ class Smartbook extends React.Component {
                 editorState={this.state.editorState}
                 onChange={this.onChange}
                 handleReturn={this.handlePastedText.bind(this, '\n')}
-                blockRendererFn={myBlockRenderer}
+                blockRendererFn={smartRenderer}
                 handleKeyCommand={this.handleKeyCommand}
                 handlePastedText={this.handlePastedText}
             />
