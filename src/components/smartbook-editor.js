@@ -1,9 +1,9 @@
 import React from 'react';
 import Draft from 'draft-js';
 import Imm from 'immutable';
-import {Smartblock, smartRenderer} from './block';
+import {smartbookEditorRendererFn} from './smartbook-block';
 
-class Smartbook extends React.Component {
+class SmartbookEditor extends React.Component {
     constructor(props) {
         super(props);
         const initialBlocks = [this.makeContentBlock("", 'first')];
@@ -38,19 +38,18 @@ class Smartbook extends React.Component {
     toContentBlocks = (zipped, order) => {
         return zipped.map(block => 
                 Imm.List(block).zipWith((el, type) => this.makeContentBlock(el ? el : '', type), order).toArray() )
-            // This is really dumb. It is basically foldl here.
-            // Why not to follow Haskell's 'join' (or 'concat' for the lists) laws to flatten out the inner list?!!!
+            // This is dumb. It is basically foldl here.
+            // Wish there were Haskell's 'join' (or 'concat' for the lists) laws to flatten out the inner list!
             . reduce((accum, data) => {
                 return accum.concat(data);
             }, []);
     }
     
     getCurrent = (state) => {
-        const content = state.getCurrentContent();
         const selection = state.getSelection();
         const key = selection.focusKey;
         const offset = selection.focusOffset;
-        const block = content.getBlockForKey(key);
+        const block = state.getCurrentContent().getBlockForKey(key);
         const type = block.data.book;
         return {key: key, offset: offset, block: block, type: type};
     }
@@ -67,31 +66,33 @@ class Smartbook extends React.Component {
         const blocksBefore = blocks.toSeq().takeUntil(block => block === blockInto).toArray();
         const blocksAfter = blocks.toSeq().skipUntil(block => block === blockInto).toArray();
         
+        // Transforming to text
         const texts = order.map(bookType =>
             blocksAfter.filter(block => block.data.book === bookType)
                        .reduce((accum, data) => accum + data.text + "\n", "")
                        .slice(0, -1) // removing last \n
-        );
-        // [ "book 1 text ...", "book 2 text ...", ..., "book N text ..." ]
+        ); // [ "book 1 text ...", "book 2 text ...", ..., "book N text ..." ]
         
+        // Inserting
         const joined = Imm.List(texts).set(0, texts[0].substring(0, offsetInto) 
                                             + text 
                                             + texts[0].substring(offsetInto)).toArray();
 
+        // Building back
         const zipped = this.zipTexts(joined);
         const newBlocks = this.toContentBlocks(zipped, order);
-
         const blocksMap = Draft.ContentState.createFromBlockArray(blocksBefore.concat(newBlocks));
 
         // Calculating the insertion borders
         const temp = text.split("\n");
-        const startIndex = blocksBefore.length;
         const endIndex = blocksBefore.length + (temp.length * order.length - 1) - 1;
-        const endOffset = temp[temp.length - 1].length;
+        const endOffset = temp[temp.length - 1].length 
+            // Correcting if there was previous text to reckon with on the same line 
+            + (temp.length === 1 ? offsetInto : 0);
 
-        return { blocks: blocksMap
-               , startIndex: startIndex, startOffset: offsetInto
-               , endIndex: endIndex, endOffset: endOffset};
+        return { newBlocks: blocksMap
+               , newKey: blocksMap.getBlocksAsArray()[endIndex].key
+               , newOffset: endOffset};
     }
 
     /* Deletion always happens backwards 
@@ -101,6 +102,7 @@ class Smartbook extends React.Component {
         const blocks = state.getCurrentContent().getBlockMap();
         const bookType = blockFrom.data.book;
         
+        // Splitting
         const thisBook = blocks.toSeq()
             .filter(block => block.data.book === bookType);
         const otherBooks = blocks.toSeq()
@@ -122,19 +124,15 @@ class Smartbook extends React.Component {
         
         // Building back
         const newBlocks = prevBlocks.concat(thisBook.skipUntil(block => block === blockFrom).rest().toArray());
-        var   idx = 0; // with closure it is simpler than with reduce
-        const arr = otherBooks.map(el => {
-            if (el !== null) 
-                return el;
-            else if (idx < newBlocks.length)
-                return newBlocks[idx++];
-            else 
-                return this.makeContentBlock('', bookType);
-        });
+        var   idx = 0; // with closure it looks way more legible than with reduce
+        const arr = otherBooks.map(el => 
+            el !== null ? el :
+                idx < newBlocks.length ? newBlocks[idx++] : this.makeContentBlock('', bookType)
+        );
         
-        return { blocks: Draft.ContentState.createFromBlockArray(arr)
-               , key: newFocusKey
-               , offset: newFocusOffset
+        return { newBlocks: Draft.ContentState.createFromBlockArray(arr)
+               , newKey: newFocusKey
+               , newOffset: newFocusOffset
         };        
     }
 
@@ -148,8 +146,8 @@ class Smartbook extends React.Component {
                 isBackward: false,
         })
     
-    handlePastedText = (text: string, html?: string, editorState: EditorState): DraftHandleValue => {
-        const {key, offset, block, type} = this.getCurrent(editorState);
+    handlePastedText = (text: string, html?: string, editorState: EditorState) => {
+        const {offset, block, type} = this.getCurrent(editorState);
         const order = type === 'second' 
             // The cursor is on the second book
             ? ['second', 'first'] 
@@ -157,8 +155,8 @@ class Smartbook extends React.Component {
         
         const val = this.insertText(editorState, block, offset, order, text);
         const newState = Draft.EditorState.forceSelection(
-            Draft.EditorState.createWithContent(val.blocks),
-            this.moveCursor(val.blocks.getBlocksAsArray()[val.endIndex].key, val.endOffset));
+            Draft.EditorState.createWithContent(val.newBlocks),
+            this.moveCursor(val.newKey, val.newOffset));
 
         // Applying the changes
         this.onChange(newState);
@@ -167,12 +165,12 @@ class Smartbook extends React.Component {
 
     handleKeyCommand = (command: string, editorState) => {
         if (command === 'backspace') {
-            const {key, offset, block, type} = this.getCurrent(editorState);
+            const {offset, block} = this.getCurrent(editorState);
             const val = this.deleteText(editorState, block, offset, 1);
             
             const newState = Draft.EditorState.forceSelection(
-                Draft.EditorState.createWithContent(val.blocks),
-                this.moveCursor(val.key, val.offset));
+                Draft.EditorState.createWithContent(val.newBlocks),
+                this.moveCursor(val.newKey, val.newOffset));
             // Applying the changes
             this.onChange(newState);
             return 'handled';
@@ -187,7 +185,7 @@ class Smartbook extends React.Component {
                 editorState={this.state.editorState}
                 onChange={this.onChange}
                 handleReturn={this.handlePastedText.bind(this, '\n')}
-                blockRendererFn={smartRenderer}
+                blockRendererFn={smartbookEditorRendererFn}
                 handleKeyCommand={this.handleKeyCommand}
                 handlePastedText={this.handlePastedText}
             />
@@ -210,12 +208,6 @@ class Smartbook extends React.Component {
 //        console.log(blocks);
         
 
-        const { editorState } = this.state;
-        var   selectionState = editorState.getSelection();
-        const content = editorState.getCurrentContent();
-        var   currentKey = selectionState.getFocusKey();
-        var   nextKey = content.getKeyAfter(currentKey);
-        var   newFocusSelection = Draft.SelectionState.createEmpty(nextKey);
         const newState = Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(blocks));
 
             // Applying the changes
@@ -281,4 +273,4 @@ Holmes was sitting with his back to me, and I had given him no sign of my occupa
         );
     }
 }
-export default Smartbook
+export default SmartbookEditor

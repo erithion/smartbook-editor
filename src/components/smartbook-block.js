@@ -1,10 +1,9 @@
 import React from 'react';
 import Draft from 'draft-js';
-import './Book.css';
+import './smartbook-editor.css';
 
-class Smartblock extends React.Component {
+class SmartbookBlock extends React.Component {
     render() {
-        const {block, contentState} = this.props;
         const {css} = this.props.blockProps;
         return (
             <div className={css}>
@@ -14,14 +13,14 @@ class Smartblock extends React.Component {
     }
 }
 
-export function smartRenderer(contentBlock) {
+export function smartbookEditorRendererFn(contentBlock) {
     const type = contentBlock.getType();
     if (type === 'unstyled') {
         var val = '';
         if (contentBlock.data.book === 'first') val = 'first-book-block';
         else if (contentBlock.data.book === 'second') val = 'second-book-block';
         return {
-            component: Smartblock,
+            component: SmartbookBlock,
             props: {
                 css: val,
             },
@@ -29,4 +28,4 @@ export function smartRenderer(contentBlock) {
     }
 }
 
-export default Smartblock
+export default SmartbookBlock
