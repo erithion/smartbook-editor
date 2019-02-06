@@ -1,21 +1,37 @@
 import React from 'react';
 import Draft from 'draft-js';
 import Imm from 'immutable';
-import {smartbookEditorRendererFn} from './smartbook-block';
+import 'draft-js/dist/Draft.css';
 
-class SmartbookEditor extends React.Component {
-    constructor(props) {
+import {smartbookEditorRendererFn} from './smartbook-block';
+import type {SmartbookEditorProps} from 'smartbook-props';
+
+// Utility to mark an end of inserted text while inserting
+function create_UUID(){
+    var dt = new Date().getTime();
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (dt + Math.random()*16)%16 | 0;
+        dt = Math.floor(dt/16);
+        return (c=='x' ? r :(r&0x3|0x8)).toString(16);
+    });
+    return uuid;
+}
+
+class SmartbookEditor extends React.Component<SmartbookEditorProps> {
+    
+    constructor(props: SmartbookEditorProps) {
         super(props);
-        const initialBlocks = [this.makeContentBlock("", 'first')];
+        const books = { first : this.props.bookFirst ? this.props.bookFirst : ''
+                      , second: this.props.bookSecond ? this.props.bookSecond : '' 
+                      };
+        const initialBlocks = this.insertFront(books);
         this.state = {
             editorState: Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(initialBlocks))
         };
-   }
+    }
 
     onChange = (editorState) => {
-        this.setState({
-            editorState
-        })
+        return this.setState({ editorState });
     }
 
     makeContentBlock = (blockText, bookType) => new Draft.ContentBlock({
@@ -25,74 +41,43 @@ class SmartbookEditor extends React.Component {
         data: { book: bookType }
     });
 
-    zipTexts = (texts: [string]) : [[string]] => {
-        const splits = texts.map(el => 
-            Imm.List(el ? el.split("\n") : []));
-        const max = splits.reduce((accum, data) => 
-            Math.max(accum, data.count()), 0);
-        const aligns = splits.map(el => 
-            el.concat( Imm.Repeat(null, max - el.count()) ));
-        return Imm.List(aligns).get(0).zip(...Imm.List(aligns).rest()).toArray();
-    }
-
-    toContentBlocks = (zipped, order) => {
-        return zipped.map(block => 
-                Imm.List(block).zipWith((el, type) => this.makeContentBlock(el ? el : '', type), order).toArray() )
-            // This is dumb. It is basically foldl here.
-            // Wish there were Haskell's 'join' (or 'concat' for the lists) laws to flatten out the inner list!
-            . reduce((accum, data) => {
-                return accum.concat(data);
-            }, []);
-    }
+    // The resulting SelectionState must be applied to editorState to take effect.
+    moveCursor = (key, offset) => 
+        new Draft.SelectionState({
+                anchorKey: key,
+                anchorOffset: offset,
+                focusKey: key,
+                focusOffset: offset,
+                isBackward: false,
+        })
     
-    getCurrent = (state) => {
-        const selection = state.getSelection();
-        const key = selection.focusKey;
-        const offset = selection.focusOffset;
-        const block = state.getCurrentContent().getBlockForKey(key);
-        const type = block.data.book;
-        return {key: key, offset: offset, block: block, type: type};
-    }
-    
-    /*  The resulting ContentBlocks map must be applied to editorState to take effect.
-        Inserts the text into blockInto ContentBlock at offsetInto offset. 
-        The type of the book is determined by the first element of the order list
-            order - the list. 
-                    Example: ['first', 'second', 'third'] - the function will mark the inserted blocks with the book text as 'first';
-                             and will add an array of 'second' and 'third' ContentBlocks of size of the inserted text in 'first'
-    */
-    insertText = (state, blockInto, offsetInto, order, text) => {
-        const blocks = state.getCurrentContent().getBlockMap();
-        const blocksBefore = blocks.toSeq().takeUntil(block => block === blockInto).toArray();
-        const blocksAfter = blocks.toSeq().skipUntil(block => block === blockInto).toArray();
-        
-        // Transforming to text
-        const texts = order.map(bookType =>
-            blocksAfter.filter(block => block.data.book === bookType)
-                       .reduce((accum, data) => accum + data.text + "\n", "")
-                       .slice(0, -1) // removing last \n
-        ); // [ "book 1 text ...", "book 2 text ...", ..., "book N text ..." ]
-        
-        // Inserting
-        const joined = Imm.List(texts).set(0, texts[0].substring(0, offsetInto) 
-                                            + text 
-                                            + texts[0].substring(offsetInto)).toArray();
-
-        // Building back
-        const zipped = this.zipTexts(joined);
-        const newBlocks = this.toContentBlocks(zipped, order);
-        const blocksMap = Draft.ContentState.createFromBlockArray(blocksBefore.concat(newBlocks));
-
-        // Calculating the insertion borders
-        const temp = text.split("\n");
-        const endIndex = blocksBefore.length + (temp.length * order.length - 1) - 1;
-        const endOffset = temp[temp.length - 1].length 
-            // Correcting if there was previous text to reckon with on the same line 
-            + (temp.length === 1 ? offsetInto : 0);
-
-        return { newBlocks: blocksMap
-               , newKey: blocksMap.getBlocksAsArray()[endIndex].key
-               , newOffset: endOffset};
+    insertFront = (books : {key1 : text1, ... }, blocks = []) => {
+        // Inserting to front
+        const texts = Imm.Map(books).map((bookText, bookType) => {
+            // To text
+            const textFromBlocks = blocks.filter(block => block.data.book === bookType)
+                                         .reduce((accum, data) => accum + data.text + "\n", "");
+            // To rows
+            const text = (bookText + textFromBlocks)
+                         .trim()
+                         .replace(/\\r\\n|\\r|\\n/g,'\n') // in case the text came from hardcoded js string
+                         .split(/\r?\n/);
+            return Imm.List(text); 
+                
+        }); // [ { "bookType 1" : ["book 1 row 1", "book 1 row 2", ...]}, ..., {"bookType N" : ["book N row 1, "book N row 2, ..."]} ]
+        // Max rows of all
+        const max = texts.map(bookText => bookText.length).toArray()
+                         .reduce((accum, val) => Math.max(accum, val), 0);
+        // Content blocks
+        const contentBlocks = texts.map((bookText, bookType) =>
+            // Padding
+            bookText.concat(Imm.Repeat(null, max - bookText.count()))
+                    .map(v => this.makeContentBlock(v ? v : '', bookType))
+        ).toList();
+        // Zipping
+        return contentBlocks.get(0)
+                            .zip(...contentBlocks.rest()).toArray()
+                            .reduce((accum, data) => accum.concat(data), []);
     }
 
     /* Deletion always happens backwards 
@@ -136,36 +121,50 @@ class SmartbookEditor extends React.Component {
         };        
     }
 
-    // The resulting SelectionState must be applied to editorState to take effect.
-    moveCursor = (key, offset) => 
-        new Draft.SelectionState({
-                anchorKey: key,
-                anchorOffset: offset,
-                focusKey: key,
-                focusOffset: offset,
-                isBackward: false,
-        })
-    
     handlePastedText = (text: string, html?: string, editorState: EditorState) => {
-        const {offset, block, type} = this.getCurrent(editorState);
-        const order = type === 'second' 
-            // The cursor is on the second book
-            ? ['second', 'first'] 
-            : ['first', 'second'];
-        
-        const val = this.insertText(editorState, block, offset, order, text);
-        const newState = Draft.EditorState.forceSelection(
-            Draft.EditorState.createWithContent(val.newBlocks),
-            this.moveCursor(val.newKey, val.newOffset));
+        const selection = editorState.getSelection();
+        const currentKey = selection.focusKey;
+        const currentOffset = selection.focusOffset;
+        const currentBlock = editorState.getCurrentContent().getBlockForKey(currentKey);
+        const marker = create_UUID();
+        const newText = [currentBlock.text.slice(0, currentOffset), text, marker, currentBlock.text.slice(currentOffset), "\n"].join('');
+
+        const blocks = editorState.getCurrentContent().getBlockMap();
+        const blocksBefore = blocks.toSeq().takeUntil(block => block === currentBlock).toArray();
+        const blocksAfter = blocks.toSeq().skipUntil(block => block === currentBlock).rest().toArray();
+
+        var newBlocks = null;
+        if (currentBlock.data.book === 'second') {
+            const prevBlockText = Imm.Seq(blocksBefore).last().text + '\n';
+            const books = { first : prevBlockText, second: newText };
+            newBlocks = Imm.Seq(blocksBefore).butLast().toArray() // skip one block above
+                              .concat(this.insertFront(books, blocksAfter));
+        } else {
+            const books = { first : newText, second: '' };
+            newBlocks = blocksBefore.concat(this.insertFront(books, blocksAfter));
+        }
+        const markedBlock = newBlocks.find(block => block.text.includes(marker));
+        const strings = markedBlock.text.split(marker); // first elem is a last string of the inserted text
+        const newContentState = Draft.ContentState.createFromBlockArray(newBlocks)
+                                                  // Setting new text
+                                                  .setIn(['blockMap', markedBlock.key, 'text'], strings.join(''));
+            
+        const newEditorState = Draft.EditorState.forceSelection
+            ( Draft.EditorState.createWithContent(newContentState)
+            , this.moveCursor(markedBlock.key, strings[0].length));
 
         // Applying the changes
-        this.onChange(newState);
+        this.onChange(newEditorState);
+
         return 'handled';
     }
 
     handleKeyCommand = (command: string, editorState) => {
         if (command === 'backspace') {
-            const {offset, block} = this.getCurrent(editorState);
+            const selection = editorState.getSelection();
+            const offset = selection.focusOffset;
+            const block = editorState.getCurrentContent().getBlockForKey(selection.focusKey);
+            // TODO: make sure delete on the last row deletes it
             const val = this.deleteText(editorState, block, offset, 1);
             
             const newState = Draft.EditorState.forceSelection(
@@ -180,7 +179,6 @@ class SmartbookEditor extends React.Component {
 
     render() {
         return (
-            <div>
             <Draft.Editor
                 editorState={this.state.editorState}
                 onChange={this.onChange}
@@ -189,87 +187,6 @@ class SmartbookEditor extends React.Component {
                 handleKeyCommand={this.handleKeyCommand}
                 handlePastedText={this.handlePastedText}
             />
-
-                    <input
-                    onClick={
-() => {
-
-        var first = "123\n4567\n890";
-        var second = "abc\ndef\nghi\njkl\nmno";
-        var   ls = Imm.List(first ? first.split("\n") : []);
-        var   rs = Imm.List(second ? second.split("\n") : []);
-        const max = Math.max(ls.count(), rs.count());
-
-              ls = ls.concat( Imm.Repeat(null, max - ls.count()) );
-              rs = rs.concat( Imm.Repeat(null, max - rs.count()) );
-
-        const zipped = ls.zip(rs);
-        const blocks = this.toContentBlocks(zipped, ['first', 'second']);
-//        console.log(blocks);
-        
-
-        const newState = Draft.EditorState.createWithContent(Draft.ContentState.createFromBlockArray(blocks));
-
-            // Applying the changes
-            this.onChange(newState);
-        
-    }                        
-                    }
-/*                onClick={this.addFirst.bind(this, 
-                `HOLMES, som vanligvis var meget sent oppe om morgenen, untatt i de ikke sjeldne tilfellene da han var oppe hele natten — satt ved frokostbordet.
-
-Jeg stod på kaminteppet og tok opp stokken som vår gjest den foregående aften hadde etterlatt seg. Den var forarbeidet av vakkert, fast tre, og hadde et løkformet hode. Like under håndtaket gikk et nesten tommebredt sølvbånd.
-
-Til doktor James Mortimer fra hans venner i C. C. H. var inngravert på båndet sammen med årstallet 1884.
-
-Det var nettopp en slik stokk som eldre husleger pleier å ha med seg — respektabel, solid og anselig.
-
-“Nå, Watson, hva får De ut av den?”
-
-Holmes satt med ryggen til meg, og jeg hadde ikke gitt ham noe slags vink om hva jeg holdt på med.
-
-“Hvordan kunne De vite hva jeg tok meg til? Jeg tror De har øyne i nakken.”
-
-“Jeg har i alle fall vår blankpussede sølvkaffekanne foran meg,” sa han. “Men, si meg, Watson, hva får De ut av stokken? Siden vi har vært så uheldige at eiermannen er blitt borte for oss, og vi ikke vet noe om hans ærende, får dette tilfeldige etterlatenskap betydning. La meg høre hvordan De ser for Dem mannen etter å ha undersøkt hans stokk.”
-
-“Jeg tror,” sa jeg, i det jeg fulgte så godt jeg kunne min venns fremgangsmåte, “at Doktor Mortimer er en meget populær eldre lege, velansett, siden de som kjente ham ga ham dette tegn på sin respekt.”
-
-“Godt!” sa Holmes. “Utmerket!”`  //"text\nof\nthe\nfirst\nbook\nthank\nyou\nvery\nmuch"
-                )}
-*/                
-                type="button"
-                value="Add first"
-              />
-                    <input
-                onClick={this.handlePastedText.bind(this, 
-                `Mr. Sherlock Holmes, who was usually very late in the mornings, save upon those not infrequent occasions when he was up all night, was seated at the breakfast table. I stood upon the hearth-rug and picked up the stick which our visitor had left behind him the night before. It was a fine, thick piece of wood, bulbous-headed, of the sort which is known as a "Penang lawyer." Just under the head was a broad silver band nearly an inch across. "To James Mortimer, M.R.C.S., from his friends of the C.C.H.," was engraved upon it, with the date "1884." It was just such a stick as the old-fashioned family practitioner used to carry—dignified, solid, and reassuring.
-
-"Well, Watson, what do you make of it?"
-
-Holmes was sitting with his back to me, and I had given him no sign of my occupation.
-
-"How did you know what I was doing? I believe you have eyes in the back of your head."
-
-"I have, at least, a well-polished, silver-plated coffee-pot in front of me," said he. "But, tell me, Watson, what do you make of our visitor's stick? Since we have been so unfortunate as to miss him and have no notion of his errand, this accidental souvenir becomes of importance. Let me hear you reconstruct the man by an examination of it."
-
-"I think," said I, following as far as I could the methods of my companion, "that Dr. Mortimer is a successful, elderly medical man, well-esteemed since those who know him give him this mark of their appreciation."
-
-"Good!" said Holmes. "Excellent!"
-
-"I think also that the probability is in favour of his being a country practitioner who does a great deal of his visiting on foot."
-
-"Why so?"
-
-"Because this stick, though originally a very handsome one has been so knocked about that I can hardly imagine a town practitioner carrying it. The thick-iron ferrule is worn down, so it is evident that he has done a great amount of walking with it."
-
-"Perfectly sound!" said Holmes.
-`, '', this.state.editorState //"text\nof\nthe\nsecond\nbook"
-                )}
-                type="button"
-                value="Add second"
-              />
-
-            </div>
         );
     }
 }
