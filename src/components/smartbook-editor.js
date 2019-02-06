@@ -12,7 +12,7 @@ function create_UUID(){
     var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = (dt + Math.random()*16)%16 | 0;
         dt = Math.floor(dt/16);
-        return (c=='x' ? r :(r&0x3|0x8)).toString(16);
+        return (c==='x' ? r :(r&0x3|0x8)).toString(16);
     });
     return uuid;
 }
@@ -21,6 +21,7 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
     
     constructor(props: SmartbookEditorProps) {
         super(props);
+//        console.log(Draft);
         const books = { first : this.props.bookFirst ? this.props.bookFirst : ''
                       , second: this.props.bookSecond ? this.props.bookSecond : '' 
                       };
@@ -149,9 +150,8 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
                                                   // Setting new text
                                                   .setIn(['blockMap', markedBlock.key, 'text'], strings.join(''));
             
-        const newEditorState = Draft.EditorState.forceSelection
-            ( Draft.EditorState.createWithContent(newContentState)
-            , this.moveCursor(markedBlock.key, strings[0].length));
+        const newEditorState = Draft.EditorState.forceSelection( Draft.EditorState.createWithContent(newContentState)
+                                                               , this.moveCursor(markedBlock.key, strings[0].length) );
 
         // Applying the changes
         this.onChange(newEditorState);
