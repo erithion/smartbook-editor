@@ -58,7 +58,7 @@ class App extends Component {
 //                    element.focus();
                     element.dispatchEvent(down);
                     element.dispatchEvent(right);
-//                    element.dispatchEvent(enter);
+                    element.dispatchEvent(enter);
                     element.dispatchEvent(backspace);
                 }
             }

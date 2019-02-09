@@ -37,7 +37,7 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
         type: 'unstyled',
         text: blockText,
         data: { book: bookType }
-    });
+    })
     moveCursor = (key, offset) => 
         new Draft.SelectionState({
                 anchorKey: key,
@@ -74,7 +74,40 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
                             .zip(...contentBlocks.rest()).toArray()
                             .reduce((accum, data) => accum.concat(data), []);
     }
-    deleteText = (state, blockFrom, offsetFrom, length) => {
+    deleteText = (blocks, blockFrom, offsetFrom, length) => {
+        const bookType = blockFrom.data.book;
+        
+        // Splitting
+        const thisBook = blocks.toSeq()
+            .filter(block => block.data.book === bookType);
+        const otherBooks = blocks.toSeq()
+            .map(el => el.data.book === bookType ? null : el).toArray();
+        
+        // Deleting
+        const prevLength = thisBook
+            .takeUntil(block => block === blockFrom)
+            .reduce((accum, data) => accum + data.text + "\n", "")
+            .length;
+        const bookText = thisBook
+            .reduce((accum, data) => accum + data.text + "\n", "");
+        const textLines = ( bookText.substring(0, prevLength + offsetFrom) // CAREFUL: substring(0, -1) has been tested on Opera only;
+                                                                           // Happens when hitting backspace on 0 position of the very first book row 
+                          + bookText.substring(prevLength + offsetFrom + length))
+            .trimEnd()
+            .split("\n");
+        
+        // Building back
+        const newBlocks = Imm.List(textLines).map(txt => this.makeContentBlock(txt, bookType)).toArray();  
+        var   idx = 0; // with closure it looks way more legible than with reduce
+        const arr = otherBooks.map(el => 
+            el !== null ? el :
+                idx < newBlocks.length ? newBlocks[idx++] : this.makeContentBlock('', bookType)
+        );
+        
+        return arr;        
+    }
+
+    deleteTextOld = (state, blockFrom, offsetFrom, length) => { // Deletes length characters backwards starting from offsetFrom
         const blocks = state.getCurrentContent().getBlockMap();
         const bookType = blockFrom.data.book;
         
@@ -96,7 +129,8 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
         // New borders
         const prevBlocks = Imm.List(textLines).map(txt => this.makeContentBlock(txt, bookType)).toArray();  
         const newFocusKey = prevBlocks[prevBlocks.length - 1].key;
-        const newFocusOffset = prevBlocks[prevBlocks.length - 1].text.length - offsetFromEnd;
+        const newFocusOffset = prevBlocks[prevBlocks.length - 1].text.length 
+                    - (offsetFromEnd === -1 ? 0 : offsetFromEnd); // ad-hoc for delete operation 
         
         // Building back
         const newBlocks = prevBlocks.concat(thisBook.skipUntil(block => block === blockFrom).rest().toArray());
@@ -128,14 +162,27 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
         const selection = state.editorState.getSelection();
         const offset = selection.focusOffset;
         const block = state.editorState.getCurrentContent().getBlockForKey(selection.focusKey);
+        const blocks = state.editorState.getCurrentContent().getBlockMap();
         // TODO: make sure delete on the last row deletes it
-        const val = this.deleteText(state.editorState, block, offset, 1);
+        const newBlocks = this.deleteText(blocks, block, offset - 1, 1);
+        const newContentState = Draft.ContentState.createFromBlockArray(newBlocks);
+
+        // NOTE: doesn't support selection deletion yet since doesn't try to reposition the cursor
+        return {editorState: Draft.EditorState.createWithContent(newContentState)};
+    }
+
+    _onDelete = (state) => {
+        const selection = state.editorState.getSelection();
+        const offset = selection.focusOffset;
+        const block = state.editorState.getCurrentContent().getBlockForKey(selection.focusKey);
+        const blocks = state.editorState.getCurrentContent().getBlockMap();
+        const newBlocks = this.deleteText(blocks, block, offset, 1);
         
-        const newState = Draft.EditorState.forceSelection(
-            Draft.EditorState.createWithContent(val.newBlocks),
-            this.moveCursor(val.newKey, val.newOffset));
-        return {editorState: newState};
-    };
+        const newContentState = Draft.ContentState.createFromBlockArray(newBlocks);
+
+        // NOTE: doesn't support selection deletion yet since doesn't try to reposition the cursor
+        return {editorState: Draft.EditorState.createWithContent(newContentState)};
+    }
     
     _onNextBlock = (state) => {
         const selection = state.editorState.getSelection();
@@ -146,7 +193,7 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
             state.editorState,
             this.moveCursor(key, offset));
         return {editorState: newState};
-    };
+    }
     
     _onMoveRight = (state) => {
         const selection = state.editorState.getSelection();
@@ -156,7 +203,7 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
             state.editorState,
             this.moveCursor(selection.focusKey, offset + 1));
         return {editorState: newState};
-    };
+    }
     
     _onPaste = (state, text) => {
         const selection = state.editorState.getSelection();
@@ -189,10 +236,8 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
         const newEditorState = Draft.EditorState.forceSelection( Draft.EditorState.createWithContent(newContentState)
                                                                , this.moveCursor(markedBlock.key, strings[0].length) );
 
-        // Applying the changes
-        //this.onChange(newEditorState);
         return {editorState: newEditorState};
-    };
+    }
     
     handlePastedText = (text: string) => {
         this.setState(state => this._onPaste(state, text));
@@ -202,6 +247,9 @@ class SmartbookEditor extends React.Component<SmartbookEditorProps> {
     handleKeyCommand = (command: string) => {
         if (command === 'backspace') {
             this.setState(state => this._onBackspace(state));
+            return 'handled';
+        } else if (command === 'delete') {
+            this.setState(state => this._onDelete(state));
             return 'handled';
         } else if (command === 'test/nextblock') { // For testing purposes chiefly
             this.setState(state => this._onNextBlock(state));
