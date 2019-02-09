@@ -17,6 +17,7 @@ class App extends Component {
     return (
       <div className="App">
         <SmartbookEditor 
+            id="my"
             textAlignment='left'
             bookFirst={this.state.text1}
             bookSecond={this.state.text2}
@@ -33,6 +34,36 @@ class App extends Component {
             onClick={e => this.setState({text2: "asdasdasdads", id: new Date().getTime().toString() })}
             type="button"
             value="Add second"
+        />
+        <input
+            onClick={e => {
+                    var element = document.getElementsByClassName("public-DraftEditor-content")[0];
+                    var down = new KeyboardEvent("keydown", {
+                        bubbles: true,
+                        key : 40
+                    });
+                    var right = new KeyboardEvent("keydown", {
+                        bubbles: true,
+                        key : 39
+                    });
+                    var enter = new KeyboardEvent("keydown", {
+                        bubbles: true,
+                        key : 14
+                    });
+                    var backspace = new KeyboardEvent("keydown", {
+                        bubbles: true,
+                        key : 8
+                    });
+
+//                    element.focus();
+                    element.dispatchEvent(down);
+                    element.dispatchEvent(right);
+//                    element.dispatchEvent(enter);
+                    element.dispatchEvent(backspace);
+                }
+            }
+            type="button"
+            value="Fire"
         />
       </div>
     );
