@@ -122,7 +122,64 @@ it('snapshot-check: Keyboard Backspace on the 2nd book', () => {
 
     textArea.simulate('keyDown', {key: KeyCode.KEY_DOWN});
     textArea.simulate('keyDown', {key: KeyCode.KEY_RIGHT});
+    textArea.simulate('keyDown', {key: KeyCode.KEY_RIGHT});
     textArea.simulate('keyDown', {key: KeyCode.KEY_BACK_SPACE});
+
+    expect(editor).toMatchSnapshot();
+    editor.unmount();
+});
+
+it('snapshot-check: Keyboard Delete on the 2nd book', () => {
+    const text1 = "1row1\n1row2";
+    const text2 = "2row1\n2row2\n2row3";
+    const editor = mount(<SmartbookEditor
+                            textAlignment='left'
+                            bookFirst={text1}
+                            bookSecond={text2}
+                         />);
+                         
+    const textArea = editor.find('.public-DraftEditor-content');
+
+    textArea.simulate('keyDown', {key: KeyCode.KEY_DOWN});
+    textArea.simulate('keyDown', {key: KeyCode.KEY_RIGHT});
+    textArea.simulate('keyDown', {key: KeyCode.KEY_DELETE});
+
+    expect(editor).toMatchSnapshot();
+    editor.unmount();
+});
+
+it('snapshot-check[border-test]: Keyboard Backspace on the 1st row of the 2nd book doesnt change anything', () => {
+    const text1 = "1row1\n1row2";
+    const text2 = "2row1\n2row2\n2row3";
+    const editor = mount(<SmartbookEditor
+                            textAlignment='left'
+                            bookFirst={text1}
+                            bookSecond={text2}
+                         />);
+                         
+    const textArea = editor.find('.public-DraftEditor-content');
+
+    textArea.simulate('keyDown', {key: KeyCode.KEY_DOWN});
+    textArea.simulate('keyDown', {key: KeyCode.KEY_BACK_SPACE});
+
+    expect(editor).toMatchSnapshot();
+    editor.unmount();
+});
+
+it('snapshot-check[border-test]: Keyboard Delete on the last row of the 1nd book doesnt change anything', () => {
+    const text1 = "1r";
+    const text2 = "2row1\n2row2\n2row3";
+    const editor = mount(<SmartbookEditor
+                            textAlignment='left'
+                            bookFirst={text1}
+                            bookSecond={text2}
+                         />);
+                         
+    const textArea = editor.find('.public-DraftEditor-content');
+
+    textArea.simulate('keyDown', {key: KeyCode.KEY_RIGHT});
+    textArea.simulate('keyDown', {key: KeyCode.KEY_RIGHT});
+    textArea.simulate('keyDown', {key: KeyCode.KEY_DELETE});
 
     expect(editor).toMatchSnapshot();
     editor.unmount();
