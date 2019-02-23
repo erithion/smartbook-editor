@@ -76,9 +76,39 @@ function onBackspace(cm) {
         markOdd(editor, lineAt - 2)
         // new focus
         editor.focus()
-        editor.setCursor({line: lineAt -2, ch: prevLine.length})
+        editor.setCursor({line: lineAt - 2, ch: prevLine.length})
     }
     cm.operation(backspace.bind(null, cm, line))
+}
+
+function onDelete(cm) {
+    const {line, ch} = cm.getCursor()
+    if (cm.getLine(line).length !== ch) 
+        return CodeMirror.Pass // not handling unless when deleting on the end of the row
+    const del = (editor, lineAt, charAt) => {
+        const   count = editor.lineCount()
+        if (lineAt + 1 === count || lineAt + 2 === count)
+            return; // we are on one of the end lines
+
+        const   cursorLine = editor.getLine(lineAt),
+                nextLine = editor.getLine(lineAt + 2)
+        // join current with previous
+        editor.replaceRange(nextLine, {line: lineAt, ch: charAt}, {line: lineAt, ch: charAt + nextLine.length})
+        // shifting up
+        var i = lineAt + 4
+        for (; i < count; i += 2)
+            editor.replaceRange(editor.getLine(i), {line: i - 2, ch: 0}, {line: i - 2, ch: editor.getLine(i - 2).length})
+        // clean the last one
+        editor.replaceRange('', {line: i - 2, ch: 0}, {line: i - 2, ch: editor.getLine(i - 2).length})
+        // clean excessive empty lines up
+        cleanEmptyLines(editor)
+        // mark new second book lines    
+        markOdd(editor, lineAt - 2)
+        // new focus
+        editor.focus()
+        editor.setCursor({line: lineAt, ch: charAt})
+    }
+    cm.operation(del.bind(null, cm, line, ch))
 }
 
 function createSmartbookEditor(text = '') {
@@ -94,7 +124,8 @@ function createSmartbookEditor(text = '') {
     // keyboard interception
     cm.setOption("extraKeys", {
         Enter: onNewLine,
-        Backspace: onBackspace
+        Backspace: onBackspace,
+        Delete: onDelete
     })
     return cm;
 }
