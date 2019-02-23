@@ -111,7 +111,7 @@ function onDelete(cm) {
     cm.operation(del.bind(null, cm, line, ch))
 }
 
-function onPaste(editor, e) {
+function onPaste(cm, e) {
     const clipboardData = e.clipboardData || window.clipboardData;
     var   text = clipboardData.getData('Text').split(/[\r\n]+/)
     if (text.length < 2)
@@ -150,7 +150,7 @@ function onPaste(editor, e) {
         editor.focus()
         editor.setCursor({line: newLineAt, ch: newCharAt})
     }
-    cm.operation(paste.bind(null, editor, line, ch, text))
+    cm.operation(paste.bind(null, cm, line, ch, text))
     e.preventDefault()
 }
 
