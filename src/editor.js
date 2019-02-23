@@ -27,10 +27,10 @@ function onNewLine(cm) {
     const insert = (editor, lineAt, charAt) => {
         const   cursorLine = editor.getLine(lineAt),
                 count = editor.lineCount(),
-                isOdd = lineAt % 2,
-                lastLineIdx = count - 1 + isOdd - 1  // last line of currently edited book
+                isOnSecondBook = lineAt % 2,
+                lastLineIdx = count - 1 + isOnSecondBook - 1  // last line of currently edited book
             
-        editor.replaceRange( isOdd 
+        editor.replaceRange( isOnSecondBook 
                            ? editor.lineSeparator() + editor.lineSeparator() + editor.getLine(lastLineIdx)  // \n {empty line} \n {line}
                            : editor.lineSeparator() + editor.getLine(lastLineIdx) + editor.lineSeparator()  // \n {line} \n {empty line}
                            , {line: count, ch: 0}) // right after the real last line
@@ -111,6 +111,49 @@ function onDelete(cm) {
     cm.operation(del.bind(null, cm, line, ch))
 }
 
+function onPaste(editor, e) {
+    const clipboardData = e.clipboardData || window.clipboardData;
+    var   text = clipboardData.getData('Text').split(/[\r\n]+/)
+    if (text.length < 2)
+        return; // it's just a single line
+
+    const {line, ch} = cm.getCursor()
+    const paste = (editor, lineAt, charAt, textLines) => {
+        const   count = editor.lineCount(),
+                newCharAt = textLines[textLines.length - 1].length,
+                newLineAt = lineAt + (textLines.length - 1) * 2,
+                cursorLine = editor.getLine(lineAt),
+                newFirstLine = cursorLine.slice(0, charAt) + textLines.shift() 
+                             + (count % 2 === 1 ? editor.lineSeparator() : ''), // code below assumes there's always even number of rows
+                isOnSecondBook = lineAt % 2
+        // 
+        textLines[textLines.length - 1] += cursorLine.slice(charAt)
+        editor.replaceRange(newFirstLine, {line: lineAt, ch: 0}, {line: lineAt, ch: editor.getLine(lineAt).length})
+        // 
+        var i = lineAt + 2
+        for (; i < count; i += 2) {
+            const cur = editor.getLine(i)
+            textLines.push(cur)
+            editor.replaceRange(textLines.shift(), {line: i, ch: 0}, {line: i, ch: cur.length})
+        }
+        const sep = editor.lineSeparator() + editor.lineSeparator()
+        const cont = textLines.join(sep)
+        const rest = isOnSecondBook 
+                   ? sep + cont
+                   : editor.lineSeparator() + cont + editor.lineSeparator()
+        editor.replaceRange(rest, {line: i, ch: 0})
+        // clean excessive empty lines up
+        cleanEmptyLines(editor)
+        // mark new second book lines    
+        markOdd(editor, lineAt)
+        // new focus
+        editor.focus()
+        editor.setCursor({line: newLineAt, ch: newCharAt})
+    }
+    cm.operation(paste.bind(null, editor, line, ch, text))
+    e.preventDefault()
+}
+
 function createSmartbookEditor(text = '') {
     var cm = CodeMirror(document.getElementById("editor"), {
         value: text, // initial value
@@ -128,8 +171,7 @@ function createSmartbookEditor(text = '') {
         Backspace: onBackspace,
         Delete: onDelete
     })
-    cm.on('paste',
-        function(editor, e) { window.alert('sdf'); e.preventDefault(); });
+    cm.on('paste', onPaste);
     return cm;
 }
 
