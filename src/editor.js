@@ -116,6 +116,7 @@ function createSmartbookEditor(text = '') {
         value: text, // initial value
         mode: "",
         indentUnit: 4,
+        scrollbarStyle: 'overlay',
         lineNumbers: false, // no line numbers
         lineWrapping: true, // wrap long lines
         inputSyle: 'contenteditable'
@@ -127,6 +128,8 @@ function createSmartbookEditor(text = '') {
         Backspace: onBackspace,
         Delete: onDelete
     })
+    cm.on('paste',
+        function(editor, e) { window.alert('sdf'); e.preventDefault(); });
     return cm;
 }
 
