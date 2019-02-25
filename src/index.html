@@ -1,15 +1,22 @@
 <head>
-<link rel="stylesheet" type="text/css" href="../node_modules/codemirror/lib/codemirror.css">
-<link rel="stylesheet" href="../node_modules/codemirror/addon/scroll/simplescrollbars.css">
-<link rel="stylesheet" type="text/css" href="editor.css">
-<script src="../node_modules/codemirror/lib/codemirror.js"></script>
-<script src="../node_modules/codemirror/addon/scroll/simplescrollbars.js"></script>
+    <link rel="stylesheet" type="text/css" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../node_modules/codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="../node_modules/codemirror/addon/scroll/simplescrollbars.css">
+    <link rel="stylesheet" type="text/css" href="editor.css">
+    <script src="../node_modules/codemirror/lib/codemirror.js"></script>
+    <script src="../node_modules/codemirror/addon/scroll/simplescrollbars.js"></script>
+    <script src="editor.js"></script>
 </head>
 <body>
-<div id="editor"></div>
-<script src="editor.js"></script>
-<script>
-var cm = createSmartbookEditor()//(loadTestData());
-</script>
+    <div id="editor" class='form-control'></div>
+<form class="my-meta-container" novalidate="novalidate">
+    <input class="form-control mr-4 w-25 p-1 error" id="title" type="text" name="title" placeholder="Title" aria-label="Book title" aria-describedby="basic-addon1">
+    <input class="form-control mr-4 ml-4 w-25 p-1 error" id="author" type="text" name="author" placeholder="Author" aria-label="Author" aria-describedby="basic-addon1">
+    <button class="ml-4 btn h-25 my-btn-info btn-lg " type="button" id="save" disabled="">Save</button>
+</form>
+    <button class="ml-4 btn btn-primary" type="button" id="save" disabled="">Save</button>
+
+    <script> var cm = createSmartbookEditor()//(loadTestData()); </script>
+    <script type="text/javascript" src="../node_modules/bootstrap.native/dist/bootstrap-native-v4.min.js"></script>
 </body>
 

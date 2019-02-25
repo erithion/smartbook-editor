@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/erithion/smartbook-editor#readme",
   "dependencies": {
+    "bootstrap": "^4.3.1",
+    "bootstrap.native": "^2.0.25",
     "codemirror": "^5.44.0"
   },
   "devDependencies": {

@@ -2,17 +2,60 @@ body, html {
     padding: 15px;
 }
 
-#editor {
-    border: 1px solid #DDD
+#editor:hover {
+    border-color: #055F63; 
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+}
+.form-control:hover {
+    border-color: #055F63; 
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+} 
+/*
+#editor:focus-within {
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+    border-color: #ced4da;
+}
+.form-control:focus {
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+    border-color: #ced4da;
+}
+*/
+.form-control:focus {
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+    border-color: #055F63; 
 }
 
-.marked-text {
-    /* background: red;     */
-}
-.marked-text span {
-   color: gray;
-    color: #6a737d;
-    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
-    font-size: 12px;
 
+div.form-control {
+    height: auto;
 }
+
+.my-meta-container {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    display: flex;
+    flex-flow: row;
+    height: 8%;
+}
+  
+.my-btn-info:hover {
+/*    color: #F1F1E6;*/
+    color: white;
+}
+.my-btn-info {
+    color: #fff;
+    background-color: #055F63;
+    border-color: #117a8b;
+    line-height: 3px;
+}
+
+/* to make bootstrap placeholders disappear */
+input:focus::-webkit-input-placeholder { color:transparent; }
+input:focus:-moz-placeholder { color:transparent; } /* Firefox 18- */
+input:focus::-moz-placeholder { color:transparent; } /* Firefox 19+ */
+input:focus:-ms-input-placeholder { color:transparent; } /* oldIE ;) */
