@@ -2,21 +2,112 @@
     <link rel="stylesheet" type="text/css" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="../node_modules/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="../node_modules/codemirror/addon/scroll/simplescrollbars.css">
+    <link rel="stylesheet" href="../node_modules/font-awesome/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="editor.css">
+    
+    <script src="../node_modules/jquery/dist/jquery.js"></script>
+    <script src="../node_modules/popper.js/dist/umd/popper.js"></script>
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.js"></script>
+
     <script src="../node_modules/codemirror/lib/codemirror.js"></script>
     <script src="../node_modules/codemirror/addon/scroll/simplescrollbars.js"></script>
+    <script src="../node_modules/bootbox/bootbox.min.js"></script>
     <script src="editor.js"></script>
+    
 </head>
-<body>
+<body class="p-3">
     <div id="editor" class='form-control'></div>
-<form class="my-meta-container" novalidate="novalidate">
-    <input class="form-control mr-4 w-25 p-1 error" id="title" type="text" name="title" placeholder="Title" aria-label="Book title" aria-describedby="basic-addon1">
-    <input class="form-control mr-4 ml-4 w-25 p-1 error" id="author" type="text" name="author" placeholder="Author" aria-label="Author" aria-describedby="basic-addon1">
-    <button class="ml-4 btn h-25 my-btn-info btn-lg " type="button" id="save" disabled="">Save</button>
-</form>
-    <button class="ml-4 btn btn-primary" type="button" id="save" disabled="">Save</button>
+    <script>
+        var cm = createSmartbookEditor()//(loadTestData()); 
+        
+        errorWindow = (caption, text) => 
+            bootbox.dialog({
+                title: caption,
+                message: '<p><i class="fa fa-warning"></i> Error: ' + text + '</p>'
+            })            
+        yesodErrorWindow = (caption, text) => { 
+            var tmp = document.createElement("DIV");
+            tmp.innerHTML = text;
+            var err = tmp.getElementsByTagName('h1')[0].innerText;
+            var msg = tmp.getElementsByTagName('ul')[0].innerText;
 
-    <script> var cm = createSmartbookEditor()//(loadTestData()); </script>
-    <script type="text/javascript" src="../node_modules/bootstrap.native/dist/bootstrap-native-v4.min.js"></script>
+            bootbox.dialog({
+                title: caption,
+                message: '<p><i class="fa fa-warning"></i> <b>' + err + '</b>: ' + msg + '</p>'
+            })
+        }
+        postPath = () => 'http://192.168.18.139:3216/book'
+        postData = () => ({ 
+            author: document.getElementById('author').value.length === 0 ? null : document.getElementById('author').value,
+            title: document.getElementById('title').value.length === 0 ? null : document.getElementById('title').value,
+            filename: 'out.sb',
+            bilingualText: cm.getValue().length === 0 ? null : cm.getValue()
+        })
+
+        isValid = () => {
+            var form = document.getElementById('bookInfo')
+            form.classList.add('was-validated')
+            return form.checkValidity()
+        }
+
+        send = (path, params, method) => {
+        
+            method = method || "post"; // Set method to post by default if not specified.
+
+            var req = new XMLHttpRequest();
+            req.open(method, path, true);
+            req.setRequestHeader('Content-Type', 'application/json; charset=UTF-8')
+            
+            var dialog = bootbox.dialog({
+                    title: 'Creating smartbook',
+                    centerVertical : true,
+                    message: '<p><i class="fa fa-spin fa-spinner"></i> Waiting for server...</p>',
+                    closeButton: false,
+                    show: true
+            })
+
+            req.onerror = function(e){
+                dialog.modal('hide')
+                errorWindow( 'Creating smartbook'
+                           , e.target.statusText.length === 0 
+                                ? 'Network request failed' 
+                                : e.target.statusText)
+            }
+            
+            req.onloadend = function () {
+                dialog.modal('hide')
+
+                if (req.status !== 200 && req.status !== 0) 
+                    yesodErrorWindow('Creating smartbook', req.responseText)
+            }
+
+            // Dialog is asynchronous and they recommend to run any dependent code though callback
+            // Here onloadend is triggered earlier than dialog is shown
+            dialog.on('shown.bs.modal', function(e){
+                req.send(JSON.stringify(params))
+            })
+        }
+    </script>
+    <form id="bookInfo" class="needs-validation" novalidate>
+    <div class="form-row mt-3 float-right align-items-left" >
+        <div class="col-auto">
+            <label class="sr-only" for="title">Title</label>
+            <input type="text" class="form-control mb-2" placeholder="Title" id="title" required>
+            <div class="invalid-feedback">
+                Book title is required
+            </div>
+        </div>
+        <div class="col-auto">
+            <label class="sr-only" for="author">Author</label>
+            <input type="text" class="form-control" placeholder="Author" id="author" required>
+            <div class="invalid-feedback">
+                Book author is required
+            </div>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-primary mb-2" onclick="if (isValid()) send(postPath(), postData())">Save</button>
+        </div>
+    </div>
+    </form>
 </body>
 

@@ -1,35 +1,67 @@
-body, html {
-    padding: 15px;
+:root {
+  --smart-green: #055F63;
 }
 
-#editor:hover {
-    border-color: #055F63; 
-    box-shadow: none; 
-    -webkit-box-shadow: none;
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:not(:disabled):not(.disabled):focus,
+.btn-primary:not(:disabled):not(.disabled):active {
+  color: white;
+  background-color: var(--smart-green);
+  border-color: var(--smart-green);
 }
-.form-control:hover {
-    border-color: #055F63; 
-    box-shadow: none; 
-    -webkit-box-shadow: none;
-} 
-/*
+.btn-primary:active,
+.btn-primary:focus{
+    box-shadow: 0 0 0 0.2rem #e6fff2;
+}
+
+.marked-text span {
+    color: #6a737d;
+    font-size: 0.75rem;
+}
+
+.CodeMirror {
+    font-size: 1.25rem;
+    height: 85%;
+}
+
+#editor {
+    padding-right: 2px;
+}
+
 #editor:focus-within {
+    border-color: var(--smart-green);
     box-shadow: none; 
     -webkit-box-shadow: none;
-    border-color: #ced4da;
-}
-.form-control:focus {
-    box-shadow: none; 
-    -webkit-box-shadow: none;
-    border-color: #ced4da;
-}
-*/
-.form-control:focus {
-    box-shadow: none; 
-    -webkit-box-shadow: none;
-    border-color: #055F63; 
 }
 
+.form-control:focus {
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+/*    -webkit-box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25);
+    box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25);*/
+    border-color: var(--smart-green);
+}
+
+.form-control:valid {
+    border-color: var(--smart-green) !important;
+    box-shadow: none !important; 
+    -webkit-box-shadow: none !important;
+    background-image: none !important;
+}
+
+.fa-spinner {
+    color: var(--smart-green);
+}
+
+.fa-warning {
+    color: red;
+}
+
+/* HOTFIX for bootbox modal error dialog */
+.modal-header {
+    display: block;
+}
 
 div.form-control {
     height: auto;
@@ -42,14 +74,18 @@ div.form-control {
     flex-flow: row;
     height: 8%;
 }
-  
+/* Scrollbar */
+.CodeMirror-overlayscroll-horizontal div:hover, .CodeMirror-overlayscroll-vertical div:hover {
+    background: var(--smart-green);
+}
+
 .my-btn-info:hover {
 /*    color: #F1F1E6;*/
     color: white;
 }
 .my-btn-info {
     color: #fff;
-    background-color: #055F63;
+    background-color: var(--smart-green);
     border-color: #117a8b;
     line-height: 3px;
 }
