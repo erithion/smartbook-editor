@@ -7,17 +7,22 @@
     
     <script src="../node_modules/jquery/dist/jquery.js"></script>
     <script src="../node_modules/popper.js/dist/umd/popper.js"></script>
+    <!-- HOT FIX to solve the problem of inproper loading as proposed in https://github.com/understrap/understrap/issues/449 -->
+    <!-- though, comment the line if you run this under browser and not from npm -->
+    <script> window.$ = window.jQuery = require('jquery'); </script>
     <script src="../node_modules/bootstrap/dist/js/bootstrap.js"></script>
-
+    <script src="../node_modules/bootbox/bootbox.min.js"></script>
     <script src="../node_modules/codemirror/lib/codemirror.js"></script>
     <script src="../node_modules/codemirror/addon/scroll/simplescrollbars.js"></script>
-    <script src="../node_modules/bootbox/bootbox.min.js"></script>
     <script src="editor.js"></script>
     
 </head>
 <body class="p-3">
     <div id="editor" class='form-control'></div>
     <script>
+        const { remote } = require('electron')  // will not work in plain browser
+        const mainProcess = remote.require('./main.js')
+
         var cm = createSmartbookEditor()//(loadTestData()); 
         
         errorWindow = (caption, text) => 
@@ -36,11 +41,11 @@
                 message: '<p><i class="fa fa-warning"></i> <b>' + err + '</b>: ' + msg + '</p>'
             })
         }
-        postPath = () => 'http://192.168.18.139:3216/book'
+        postPath = () => 'https://sbsvc.herokuapp.com/book' // 'http://192.168.18.139:3216/book'
         postData = () => ({ 
             author: document.getElementById('author').value.length === 0 ? null : document.getElementById('author').value,
             title: document.getElementById('title').value.length === 0 ? null : document.getElementById('title').value,
-            filename: 'out.sb',
+            filename: mainProcess.saveFileDialog(),// 'tree.sb',
             bilingualText: cm.getValue().length === 0 ? null : cm.getValue()
         })
 
@@ -54,6 +59,7 @@
         
             method = method || "post"; // Set method to post by default if not specified.
 
+            const saveTo = params.filename
             var req = new XMLHttpRequest();
             req.open(method, path, true);
             req.setRequestHeader('Content-Type', 'application/json; charset=UTF-8')
@@ -79,6 +85,12 @@
 
                 if (req.status !== 200 && req.status !== 0) 
                     yesodErrorWindow('Creating smartbook', req.responseText)
+
+                if (req.status === 200) 
+                    mainProcess.saveFile(saveTo, req.responseText, (err) => {
+                        if (err)
+                            errorWindow('Creating smartbook', err)
+                    })
             }
 
             // Dialog is asynchronous and they recommend to run any dependent code though callback
