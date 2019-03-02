@@ -2,6 +2,7 @@
   --smart-green: #055F63;
 }
 
+/* Button */
 .btn-primary,
 .btn-primary:hover,
 .btn-primary:not(:disabled):not(.disabled):focus,
@@ -14,7 +15,7 @@
 .btn-primary:focus{
     box-shadow: 0 0 0 0.2rem #e6fff2;
 }
-
+/**********************************/
 .marked-text span {
     color: #6a737d;
     font-size: 0.75rem;
@@ -35,21 +36,43 @@
     -webkit-box-shadow: none;
 }
 
+#editor:hover {
+    box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(40,167,69,.3), 0 1px 3px 1px rgba(40,167,69,.15);
+    z-index: 1;
+    cursor: pointer;
+    transition: none;
+}
+/*****************************/
 .form-control:focus {
     box-shadow: none; 
     -webkit-box-shadow: none;
-/*    -webkit-box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25);
-    box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25);*/
     border-color: var(--smart-green);
+    cursor: default;
+}
+
+.form-control:hover {
+    box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(40,167,69,.3), 0 1px 3px 1px rgba(40,167,69,.15);
+    z-index: 1;
+    cursor: pointer;
+    transition: none;
 }
 
 .form-control:valid {
-    border-color: var(--smart-green) !important;
+    border-color: 1px solid #ced4da !important; /*var(--smart-green) !important;*/
     box-shadow: none !important; 
     -webkit-box-shadow: none !important;
     background-image: none !important;
 }
+/*
+.form-control.is-invalid, .was-validated .form-control:valid {
+    border-color:  #ced4da; /*var(--smart-green) !important;*/
+}
+*/
+.was-validated .form-control:invalid:focus {
+    box-shadow: none;
+}
 
+/*******************************************/
 .fa-spinner {
     color: var(--smart-green);
 }
@@ -67,31 +90,7 @@ div.form-control {
     height: auto;
 }
 
-.my-meta-container {
-    padding-top: 10px;
-    padding-bottom: 10px;
-    display: flex;
-    flex-flow: row;
-    height: 8%;
-}
 /* Scrollbar */
 .CodeMirror-overlayscroll-horizontal div:hover, .CodeMirror-overlayscroll-vertical div:hover {
     background: var(--smart-green);
 }
-
-.my-btn-info:hover {
-/*    color: #F1F1E6;*/
-    color: white;
-}
-.my-btn-info {
-    color: #fff;
-    background-color: var(--smart-green);
-    border-color: #117a8b;
-    line-height: 3px;
-}
-
-/* to make bootstrap placeholders disappear */
-input:focus::-webkit-input-placeholder { color:transparent; }
-input:focus:-moz-placeholder { color:transparent; } /* Firefox 18- */
-input:focus::-moz-placeholder { color:transparent; } /* Firefox 19+ */
-input:focus:-ms-input-placeholder { color:transparent; } /* oldIE ;) */

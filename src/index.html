@@ -18,10 +18,10 @@
     
 </head>
 <body class="p-3">
-    <div id="editor" class='form-control'></div>
+    <div id="editor" class='form-control' placeholder='Book'></div>
     <script>
-        const { remote } = require('electron')  // will not work in plain browser
-        const mainProcess = remote.require('./main.js')
+//        const { remote } = require('electron')  // will not work in plain browser
+//        const mainProcess = remote.require('./main.js')
 
         var cm = createSmartbookEditor()//(loadTestData()); 
         
@@ -43,10 +43,10 @@
         }
         postPath = () => 'https://sbsvc.herokuapp.com/book' // 'http://192.168.18.139:3216/book'
         postData = () => ({ 
-            author: document.getElementById('author').value.length === 0 ? null : document.getElementById('author').value,
-            title: document.getElementById('title').value.length === 0 ? null : document.getElementById('title').value,
+            author: document.getElementById('author').value,
+            title: document.getElementById('title').value,
             filename: mainProcess.saveFileDialog(),// 'tree.sb',
-            bilingualText: cm.getValue().length === 0 ? null : cm.getValue()
+            bilingualText: cm.getValue()
         })
 
         isValid = () => {
