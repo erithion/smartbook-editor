@@ -20,8 +20,8 @@
 <body class="p-3">
     <div id="editor" class='form-control' placeholder='Book'></div>
     <script>
-//        const { remote } = require('electron')  // will not work in plain browser
-//        const mainProcess = remote.require('./main.js')
+        const { remote } = require('electron')  // will not work in plain browser
+        const mainProcess = remote.require('./main.js')
 
         var cm = createSmartbookEditor()//(loadTestData()); 
         
@@ -41,7 +41,7 @@
                 message: '<p><i class="fa fa-warning"></i> <b>' + err + '</b>: ' + msg + '</p>'
             })
         }
-        postPath = () => 'https://sbsvc.herokuapp.com/book' // 'http://192.168.18.139:3216/book'
+        postPath = () => 'https://sbsvc.herokuapp.com/book'
         postData = () => ({ 
             author: document.getElementById('author').value,
             title: document.getElementById('title').value,
@@ -93,8 +93,8 @@
                     })
             }
 
-            // Dialog is asynchronous and they recommend to run any dependent code though callback
-            // Here onloadend is triggered earlier than dialog is shown
+            // Dialog is asynchronous and they recommend to run any dependent code through callback
+            // Here onloadend is triggered earlier than the dialog is shown
             dialog.on('shown.bs.modal', function(e){
                 req.send(JSON.stringify(params))
             })

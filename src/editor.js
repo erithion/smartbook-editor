@@ -1,15 +1,4 @@
-function loadTestData() {
-    try {
-        var request = new XMLHttpRequest();
-        request.open('GET', 'http://www.gutenberg.org/files/1342/1342-0.txt', false);  // `false` makes the request synchronous
-        request.send(null);
-        if (request.status === 200)
-            return request.responseText;
-    } catch (DOMException) {
-    }
-    return "function myScript() {\n    return 100;\n}\nasdwer skjdfsjkdfh sdafasjdfas sdfsadf sadfasdfsadf sadfadsfasdfasd sdfasdfsdf\nzxczxc\nkasdjflksdjf sdkfjaskldjfklasjfdk sdlafjklsdfjklasdjfaskldjf sldkfjlaskdjflkasjdfkl jsdlkfjalskdfjasdf";
-}
-
+// test data http://www.gutenberg.org/files/1342/1342-0.txt
 // styling
 function markOdd(editor, lineFrom = 0){
     const count = editor.lineCount();

@@ -1,5 +1,6 @@
 :root {
   --smart-green: #055F63;
+  --shadow: 0 1px 2px 0 rgba(40,167,69,.3), 0 1px 3px 1px rgba(40,167,69,.15);
 }
 
 /* Button */
@@ -14,6 +15,10 @@
 .btn-primary:active,
 .btn-primary:focus{
     box-shadow: 0 0 0 0.2rem #e6fff2;
+}
+.btn-primary:hover {
+    box-shadow: var(--shadow), 0 1px 3px 3px rgba(40,167,69,.10);
+    z-index: 1;
 }
 /**********************************/
 .marked-text span {
@@ -37,7 +42,7 @@
 }
 
 #editor:hover {
-    box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(40,167,69,.3), 0 1px 3px 1px rgba(40,167,69,.15);
+    box-shadow: var(--shadow);
     z-index: 1;
     cursor: pointer;
     transition: none;
@@ -51,27 +56,39 @@
 }
 
 .form-control:hover {
-    box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(40,167,69,.3), 0 1px 3px 1px rgba(40,167,69,.15);
+    box-shadow: var(--shadow);
     z-index: 1;
     cursor: pointer;
     transition: none;
 }
-
-.form-control:valid {
-    border-color: 1px solid #ced4da !important; /*var(--smart-green) !important;*/
+/************* VALIDATION STATES *********************/
+.was-validated .form-control:valid {
+    border-color: #ced4da !important; 
     box-shadow: none !important; 
     -webkit-box-shadow: none !important;
     background-image: none !important;
 }
-/*
-.form-control.is-invalid, .was-validated .form-control:valid {
-    border-color:  #ced4da; /*var(--smart-green) !important;*/
+.was-validated .form-control:valid:focus {
+    box-shadow: none; 
+    -webkit-box-shadow: none;
+    border-color: var(--smart-green) !important;
+    cursor: default;
 }
-*/
+.was-validated .form-control:valid:hover {
+    box-shadow: var(--shadow) !important;
+    z-index: 1;
+    cursor: pointer;
+    transition: none;
+}
+.was-validated .form-control:invalid:hover {
+    box-shadow: 0 1px 2px 0 rgba(220,53,69,.3), 0 1px 3px 1px rgba(220,53,69,.15);
+    z-index: 1;
+    transition: none;
+    cursor: pointer;
+}
 .was-validated .form-control:invalid:focus {
     box-shadow: none;
 }
-
 /*******************************************/
 .fa-spinner {
     color: var(--smart-green);
