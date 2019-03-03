@@ -92,10 +92,17 @@
 /*******************************************/
 .fa-spinner {
     color: var(--smart-green);
+    font-size:1.75rem;
 }
 
 .fa-warning {
     color: red;
+    font-size:1.75rem;
+}
+
+.fa-info {
+    color: var(--smart-green);
+    font-size:1.75rem;
 }
 
 /* HOTFIX for bootbox modal error dialog */

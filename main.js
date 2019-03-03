@@ -4,6 +4,7 @@ var fs = require('fs')
 function saveFileDialog() {
     const options = {
         defaultPath: app.getPath('documents'),
+        filters: [{name: 'smartbooks', extensions: ['sb']}]
     }
     return dialog.showSaveDialog(null, options)
 }

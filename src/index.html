@@ -28,7 +28,12 @@
         errorWindow = (caption, text) => 
             bootbox.dialog({
                 title: caption,
-                message: '<p><i class="fa fa-warning"></i> Error: ' + text + '</p>'
+                message: '<p><i class="fa fa-warning"></i>&nbsp;&nbsp;&nbsp;Error: ' + text + '</p>'
+            })            
+        successWindow = (caption, text) => 
+            bootbox.dialog({
+                title: caption,
+                message: '<p><i class="fa fa-info"></i>&nbsp;&nbsp;&nbsp;' + text + '</p>'
             })            
         yesodErrorWindow = (caption, text) => { 
             var tmp = document.createElement("DIV");
@@ -38,14 +43,14 @@
 
             bootbox.dialog({
                 title: caption,
-                message: '<p><i class="fa fa-warning"></i> <b>' + err + '</b>: ' + msg + '</p>'
+                message: '<p><i class="fa fa-warning"></i>&nbsp;&nbsp;&nbsp;<b>' + err + '</b>: ' + msg + '</p>'
             })
         }
         postPath = () => 'https://sbsvc.herokuapp.com/book'
         postData = () => ({ 
             author: document.getElementById('author').value,
             title: document.getElementById('title').value,
-            filename: mainProcess.saveFileDialog(),// 'tree.sb',
+            filename: mainProcess.saveFileDialog(),
             bilingualText: cm.getValue()
         })
 
@@ -60,6 +65,8 @@
             method = method || "post"; // Set method to post by default if not specified.
 
             const saveTo = params.filename
+            if (saveTo === undefined)
+                return
             var req = new XMLHttpRequest();
             req.open(method, path, true);
             req.setRequestHeader('Content-Type', 'application/json; charset=UTF-8')
@@ -67,7 +74,7 @@
             var dialog = bootbox.dialog({
                     title: 'Creating smartbook',
                     centerVertical : true,
-                    message: '<p><i class="fa fa-spin fa-spinner"></i> Waiting for server...</p>',
+                    message: '<p><i class="fa fa-spin fa-spinner"></i>&nbsp;&nbsp;&nbsp;Waiting for server...</p>',
                     closeButton: false,
                     show: true
             })
@@ -90,6 +97,8 @@
                     mainProcess.saveFile(saveTo, req.responseText, (err) => {
                         if (err)
                             errorWindow('Creating smartbook', err)
+                        else
+                            successWindow('Creating smartbook', 'The book has been successfully created')
                     })
             }
 
