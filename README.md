@@ -1,5 +1,5 @@
 # smartbook-editor
-React.js UI component to edit Smartbooks 
+Editor to create bilingual books for [Smart Book](https://play.google.com/store/apps/details?id=com.kursx.smartbook&hl=en_US) ebook reader.
 
 ## Prerequisites
 Installed node.js, yarn
