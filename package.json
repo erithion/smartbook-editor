@@ -35,6 +35,9 @@
   },
   "build": {
     "appId": "com.smartbook-editor.app",
+    "directories": {
+      "buildResources": "ico"
+    },
     "win": {
       "target": "portable"
     },
