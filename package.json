@@ -1,16 +1,19 @@
 {
   "name": "smartbook-editor",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha",
   "description": "Editor for Smartbook-app bilingual books",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/erithion/smartbook-editor.git"
   },
-  "author": "Bondartsov Artyom",
+  "author": "Bondartsov Artyom <erithion@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/erithion/smartbook-editor/issues"
@@ -27,6 +30,17 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "electron": "^4.0.6",
+    "electron-builder": "^20.38.5",
     "mocha": "^6.0.1"
+  },
+  "build": {
+    "appId": "com.smartbook-editor.app",
+    "win": {
+      "target": "portable"
+    },
+    "linux": {
+      "target": "deb",
+      "category": "Education"
+    }
   }
 }
