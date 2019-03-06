@@ -2,11 +2,13 @@
 React.js UI component to edit Smartbooks 
 
 ## Prerequisites
-Installed Node.js
+Installed node.js, yarn
 
-## To run
+## To build on both Windows and Linux 
 
 * `npm install`
-* `npm start`
+* `yarn dist`
 
-If the app's UI has not been opened in a browser, go to [http://localhost:3000](http://localhost:3000) to view it there.
+The build would be in dist folder
+* On Windows - portable exe file
+* On Linux - deb file
