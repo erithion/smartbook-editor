@@ -12,3 +12,24 @@ Installed node.js, yarn
 The build would be in dist folder
 * On Windows - portable exe file
 * On Linux - deb file
+
+## Demo
+<details>
+ <summary>Example of creating a book in Linux. Click to see the gif-image</summary>
+  
+![Smartbook-Editor in Ubuntu Linux](https://github.com/erithion/smartbook-editor/raw/master/doc/book_editing_lin.gif "Smartbook-Editor in Linux Ubuntu")
+</details>
+
+
+<details>
+ <summary>Example of creating a book in Windows. Click to see the gif-image</summary>
+  
+![Smartbook-Editor in Windows 10](https://github.com/erithion/smartbook-editor/raw/master/doc/book_editing_win.gif "Smartbook-Editor in Windows 10")
+</details>
+
+
+<details>
+ <summary>Opening these books on a smartphone. Click to see the gif-image</summary>
+  
+![On smartphone](https://github.com/erithion/smartbook-editor/raw/master/doc/books_on_device.gif "On smartphone")
+</details>
