@@ -31,5 +31,5 @@ The build would be in dist folder
 <details>
  <summary>Opening these books on a smartphone. Click to see the gif-image</summary>
   
-![On smartphone](https://github.com/erithion/smartbook-editor/raw/master/doc/books_on_device.gif "On smartphone")
+  <img src="https://github.com/erithion/smartbook-editor/raw/master/doc/books_on_device.gif" width="296" height="526">
 </details>
