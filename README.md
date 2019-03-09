@@ -33,5 +33,6 @@ Upon finish the build would be in the _dist_ folder of the repository
   
   <img src="https://github.com/erithion/smartbook-editor/raw/master/doc/books_on_device.gif" width="296" height="526">
 </details>
-<br>
-_*Don't forget to set the translation direction from English to Russian in the Settings menu of the Smart Book reader for it is the only way to see the translation you have included within your book. Don't worry if your translation was not in Russian, though. This is just a way to trick Smart Book reader since its developers made a decision to permit author's translations only for English-Russian books_
+<br />
+
+_Don't forget to set the translation direction from English to Russian in the Settings menu of the Smart Book reader for it is the only way to see the translation you have included within your book. Don't worry if your translation was not in Russian, though. This is just a way to trick Smart Book reader since its developers made a decision to permit author's translations only for English-Russian books_
