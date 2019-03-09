@@ -4,14 +4,15 @@ Editor to create bilingual books for [Smart Book](https://play.google.com/store/
 ## Prerequisites
 Installed node.js, yarn
 
-## To build on both Windows and Linux 
+## Build
+On either Windows or Linux just clone the repository and execute the commands below
 
 * `npm install`
 * `yarn dist`
 
-The build would be in dist folder
-* On Windows - portable exe file
-* On Linux - deb file
+Upon finish the build would be in dist folder
+* On Windows it is a portable executable file
+* On Linux it is a deb installation package
 
 ## Demo
 <details>
