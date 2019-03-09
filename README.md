@@ -5,8 +5,10 @@ Editor to create bilingual books for [Smart Book](https://play.google.com/store/
 Installed node.js, yarn
 
 ## Build
-On either Windows or Linux just clone the repository and execute the commands below
+On either Windows or Linux
 
+* `git clone https://github.com/erithion/smartbook-editor.git`
+* `cd smartbook-editor`
 * `npm install`
 * `yarn dist`
 
