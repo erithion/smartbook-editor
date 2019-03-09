@@ -20,20 +20,20 @@ Upon finish the build would be in the _dist_ folder
 <details>
  <summary>Example of creating a book in Linux. Click to see the gif-image</summary>
   
-![Smartbook-Editor in Ubuntu Linux](https://github.com/erithion/smartbook-editor/raw/master/doc/book_editing_lin.gif "Smartbook-Editor in Linux Ubuntu")
+![Smartbook-Editor in Ubuntu Linux](https://github.com/erithion/resource/blob/master/smartbook-editor-pic/book_editing_lin.gif "Smartbook-Editor in Linux Ubuntu")
 </details>
 
 <details>
  <summary>Example of creating a book in Windows. Click to see the gif-image</summary>
   
-![Smartbook-Editor in Windows 10](https://github.com/erithion/smartbook-editor/raw/master/doc/book_editing_win.gif "Smartbook-Editor in Windows 10")
+![Smartbook-Editor in Windows 10](https://github.com/erithion/resource/blob/master/smartbook-editor-pic/book_editing_win.gif "Smartbook-Editor in Windows 10")
 </details>
 
 
 <details>
  <summary>Opening these books on a smartphone. Click to see the gif-image</summary>
   
-  <img src="https://github.com/erithion/smartbook-editor/raw/master/doc/books_on_device.gif" width="296" height="526">
+  <img src="https://github.com/erithion/resource/blob/master/smartbook-editor-pic/books_on_device.gif" width="296" height="526">
 </details>
 <br />
 
