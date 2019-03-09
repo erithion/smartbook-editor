@@ -12,7 +12,7 @@ On either Windows or Linux
 * `npm install`
 * `yarn dist`
 
-Upon finish the build would be in the _dist_ folder of the repository
+Upon finish the build would be in the _dist_ folder
 * On Windows it is a portable executable file
 * On Linux it is a deb installation package
 
