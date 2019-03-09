@@ -10,7 +10,7 @@ On either Windows or Linux just clone the repository and execute the commands be
 * `npm install`
 * `yarn dist`
 
-Upon finish the build would be in dist folder
+Upon finish the build would be in the _dist_ folder of the repository
 * On Windows it is a portable executable file
 * On Linux it is a deb installation package
 
