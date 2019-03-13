@@ -37,4 +37,4 @@ Upon finish the build would be in the _dist_ folder
 </details>
 <br />
 
-_Don't forget to set the translation direction from English to Russian in the Settings menu of the Smart Book reader for it is the only way to see the translation you have supplied your book with. Don't worry if the tongue of your book is neither English nor Russian, though. Since Smart Book reader developers made a decision to permit author's translations only for English-Russian books this is just a way to trick the app_
+_Don't forget to set the translation direction from English to Russian in the Settings menu of the Smart Book reader for it is the only way to see the translation you have supplied your book with. Don't worry if the tongue of your book is neither English nor Russian, though. Smart Book reader developers made a decision to permit author's translations only for English-Russian books, so this is just a way to trick the app_
